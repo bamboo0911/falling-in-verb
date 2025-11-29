@@ -53,7 +53,7 @@ The application follows a unidirectional data flow, orchestrated by a central St
 
 ```mermaid
 graph TD
-    User[User / Client] -->|Auth & Data| Firebase[Firebase (Auth + Firestore)]
+    User[User / Client] -->|Auth & Data| Firebase["Firebase (Auth + Firestore)"]
     User -->|Interaction| App[React App]
     
     subgraph "Core Logic"
