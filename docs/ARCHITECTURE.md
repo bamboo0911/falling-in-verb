@@ -1,57 +1,54 @@
 # Technical Architecture 🏗️
 
-## 1. The "No-Build" Firebase Strategy (Critical)
+## System Abstract
 
-A core architectural challenge in modern web development is using Firebase in a purely client-side environment (like this React App served via ESM) without a complex bundler like Webpack or Vite handling the transpilation.
-
-### The Problem
-Importing `firebase/app` via standard ESM CDNs (like `esm.sh`) often results in "Component auth has not been registered" or "Default export not found" errors. This is because the modular SDKs expect a specific build environment to resolve dependencies between the Core, Auth, and Firestore modules.
-
-### The Solution: Gstatic + Compat API
-We adopted a robust "No-Build" strategy:
-
-1.  **Global Loading (index.html)**: We load the **official Google Gstatic scripts** via the `importmap`.
-    *   `firebase-app-compat.js`
-    *   `firebase-auth-compat.js`
-    *   `firebase-firestore-compat.js`
-    *   *Why Compat?* The "Compat" libraries attach themselves to a global `firebase` namespace, ensuring that Auth and Firestore share the exact same instance of the App core.
-2.  **Namespace Resolution (firebaseConfig.ts)**:
-    *   We use `import * as firebase` but prioritize `window.firebase` if available.
-    *   We export a sanitized `firebase`, `auth`, and `db` instance to the rest of the app.
-3.  **Result**: 100% stability across browsers without requiring a Node.js build step for deployment.
+Falling In Verb is architected as a high-performance, client-side Single Page Application (SPA) that interfaces directly with Firebase services (Auth, Firestore) and the Google Gemini API. The system is designed to operate without a traditional backend server, relying instead on a robust "No-Build" strategy for service integration and a client-side state machine for application flow control.
 
 ---
 
-## 2. Data Strategy: Client-Side Filtering
+## 1. The "No-Build" Firebase Strategy
 
-### The "Index Hell" Problem
-Firestore requires specific Composite Indexes for every combination of `.where()` and `.orderBy()`.
-*   *Scenario*: To filter by Language ('pt') AND sort by Time ('desc') for a specific User, we need an index: `userId + language + timestamp`.
-*   *Issue*: Adding more languages or changing sort direction requires manual index creation in the Firebase Console, causing friction and errors during development.
+### Challenge
+Integrating modular Firebase SDKs into a purely client-side ESM environment (like a Vite-less React setup served via CDN) often leads to dependency resolution failures, specifically "Component auth has not been registered" errors.
 
-### The Solution
-We moved the filtering logic to the **Client Side (JavaScript)** for the Dashboard.
+### Solution: Gstatic Singleton Pattern
+We implement a **Global Singleton Strategy** to ensure stability:
 
-1.  **Broad Query**: The app asks Firestore: *"Give me the last 100 logs for this User"* (Requires only a basic `userId + timestamp` index).
-2.  **In-Memory Filter**: The `dbService` filters the returned array by `language` and `date` in JavaScript.
-3.  **Performance Impact**: Negligible. Even active users generate <1000 logs/month. Processing this in the browser takes milliseconds but saves hours of database configuration maintenance.
+1.  **Global Injection**: Official Google Gstatic scripts (`firebase-app-compat.js`, etc.) are loaded via `index.html`, attaching the `firebase` namespace to the global `window` object.
+2.  **Namespace Resolution**: The `firebaseConfig.ts` module prioritizes `window.firebase` over package imports, exporting a sanitized instance to the application.
+3.  **Benefit**: This guarantees that Auth and Firestore modules share the exact same core instance, eliminating initialization race conditions and ensuring 100% browser compatibility without a build step.
 
 ---
 
-## 3. State Machine (AppPhase)
+## 2. Data Strategy: Client-Side Aggregation
 
-The entire application flow is controlled by a single enum `AppPhase`.
+### Challenge: "Index Hell"
+Firestore requires composite indexes for every unique combination of `.where()` and `.orderBy()` clauses. A dashboard allowing users to filter by Language, Date, and Status would exponentially increase the number of required indexes, creating a maintenance burden.
+
+### Solution: In-Memory Filtering
+We adopt a **Fetch-Then-Filter** pattern for the dashboard:
+
+1.  **Broad Query**: The application requests a time-boxed dataset for the user (e.g., "Last 100 logs"). This requires only a simple `userId + timestamp` index.
+2.  **Client Processing**: The `dbService` performs granular filtering (by Language, Verb, etc.) and aggregation (calculating averages) in JavaScript.
+3.  **Performance**: Given the typical user volume (<1000 logs/month), client-side processing is instantaneous (sub-millisecond) and significantly reduces database configuration complexity.
+
+---
+
+## 3. Application State Machine
+
+The user experience is strictly controlled by the `AppPhase` enum, ensuring a deterministic flow.
 
 ```typescript
 enum AppPhase {
-  LOGIN,              // 1. Auth Wall (Guest vs Google)
-  LANDING,            // 2. Language Selection (PT/ES/JP/FR)
-  LOADING_VERB,       // 3. API Call (Blocking Load)
-  CONJUGATION_INPUT,  // 4. User inputs verb forms
-  CONJUGATION_REVIEW, // 5. Validation & Correction
-  LOADING_SENTENCES,  // 6. API Call (Usually skipped via Prefetch)
-  SENTENCE_INPUT,     // 7. Context Challenge
-  SENTENCE_REVIEW     // 8. Final Validation -> Save to DB
+  LOGIN,              // 1. Authentication Wall
+  DASHBOARD,          // 2. Main Analytics Dashboard
+  LANGUAGE_SELECTION, // 3. Language Context Switch
+  LOADING_VERB,       // 4. API Request (Blocking)
+  CONJUGATION_INPUT,  // 5. Active Practice: Verb Forms
+  CONJUGATION_REVIEW, // 6. Feedback & Correction
+  LOADING_SENTENCES,  // 7. API Request (Background/Blocking)
+  SENTENCE_INPUT,     // 8. Active Practice: Contextual Usage
+  SENTENCE_REVIEW     // 9. Final Validation & Persistence
 }
 ```
 
@@ -59,25 +56,25 @@ enum AppPhase {
 
 ## 4. Double Prefetching Pipeline
 
-To eliminate the 3-5 second latency typical of LLM applications, we run a parallel execution pipeline:
+To neutralize the inherent latency of Large Language Models (3-5s), the system employs a predictive prefetching mechanism:
 
-1.  **Stage A (Verb Load)**:
-    *   As soon as the user selects a language or loads a verb...
-    *   **Action**: Trigger `generateSentences(CurrentVerb)`.
-    *   **Result**: By the time the user finishes the Conjugation Table (approx 45s), the sentences are already waiting in memory. Phase 6 is skipped entirely.
+### Stage A: Context Prefetch
+*   **Trigger**: User loads a Verb.
+*   **Action**: Background request for `generateSentences(CurrentVerb)`.
+*   **Outcome**: While the user completes the conjugation table (~45s), context sentences are generated and cached. Phase 7 is effectively skipped.
 
-2.  **Stage B (Context Start)**:
-    *   As soon as the user starts the Sentence Challenge...
-    *   **Action**: Trigger `generateRandomVerb(NextVerb)`.
-    *   **Result**: When the user clicks "Next Verb", the new data is instantly swapped in. Phase 3 is skipped.
+### Stage B: Next-Verb Prefetch
+*   **Trigger**: User begins Context Practice.
+*   **Action**: Background request for `generateRandomVerb(NextVerb)`.
+*   **Outcome**: Upon completing the session, the next verb is already available. Phase 4 is effectively skipped for subsequent cycles.
 
 ---
 
 ## 5. UI/UX Architecture
 
-*   **Mobile-First Design**:
-    *   **Desktop**: Grid layouts for conjugation tables.
-    *   **Mobile**: Tabbed Interface (One tense per tab) to accommodate on-screen keyboards.
-*   **PWA (Progressive Web App)**:
-    *   **Service Worker**: Caches UI assets (`Stale-While-Revalidate`) but bypasses API calls.
-    *   **iOS Integration**: Dynamically generates PNG icons from SVGs at runtime to support Apple Home Screen requirements.
+*   **Mobile-First Design System**:
+    *   **Adaptive Layouts**: Switches between Grid (Desktop) and Tabbed (Mobile) views to accommodate on-screen keyboards.
+    *   **Touch Optimization**: Expanded touch targets (44px+) for all interactive elements.
+*   **PWA Integration**:
+    *   **Service Worker**: Implements `Stale-While-Revalidate` caching for app shell assets.
+    *   **Dynamic Iconography**: A runtime script generates iOS-compliant PNG icons from SVGs via HTML5 Canvas, bypassing iOS limitations on SVG home screen icons.

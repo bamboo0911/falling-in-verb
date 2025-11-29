@@ -1,71 +1,67 @@
 # Feature Specifications 📋
 
-## 1. Supported Languages & Grammar Logic
+## 1. Language Support & Grammar Logic
 
-### 🇧🇷 Portuguese (Brazil)
--   **Focus**: Daily spoken Brazilian Portuguese.
--   **Structure**: 6 Pronouns (Eu, Você, Ele/Ela, Nós, Vocês, Eles/Elas) x 3 Tenses.
+The application supports four distinct languages, each with tailored grammar logic and AI generation rules.
 
-### 🇪🇸 Spanish (Latin America)
--   **Focus**: Latin American usage.
--   **Structure**: 5 Pronouns (Merged 3rd Person: Él/Ella/Usted share a cell) x 3 Tenses.
--   **AI Logic**: Prompts explicitly instruct Gemini to return a single string for merged pronouns.
+| Language | Focus Area | Structural Logic | Tense Coverage |
+| :--- | :--- | :--- | :--- |
+| **Portuguese** 🇧🇷 | Brazilian Daily Usage | 6 Pronouns (Eu...Eles) | Presente, Pretérito Perfeito, Futuro do Presente |
+| **Spanish** 🇪🇸 | Latin American | 5 Pronouns (Merged 3rd Person) | Presente, Pretérito Indefinido, Futuro Simple |
+| **French** 🇫🇷 | Standard Grammar | 6 Pronouns (Je...Ils) | Présent, Passé Composé, Futur Simple |
+| **Japanese** 🇯🇵 | Structural Mastery | 2 Styles (Plain/Polite) x 6 Forms | Non-Past, Negative, Past, Past Neg, Te-Form, Volitional |
 
-### 🇫🇷 French
--   **Focus**: Standard French.
--   **Structure**: 6 Pronouns x 3 Tenses.
--   **Grammar Logic**:
-    -   **Passé Composé**: The AI generates the auxiliary verb + participle (e.g., "ai mangé") as a **single token**.
-    -   **Elision**: Contractions (J'aime, l'école) are treated as atomic units for fill-in-the-blank exercises.
-
-### 🇯🇵 Japanese
--   **Focus**: The "4 Pillars" + Te-Form + Volitional.
--   **Structure**: 2 Styles (Plain, Polite) x 6 Forms (Present, Negative, Past, Past Neg, Te-Form, Volitional).
--   **Display**: Uses a vertical list layout on mobile instead of a horizontal table.
+### AI Generation Rules
+*   **Spanish Merged Pronouns**: The AI is explicitly instructed to return a single string for merged keys (e.g., "Él/Ella/Usted"), ensuring concise data structures.
+*   **French Compound Tenses**: *Passé Composé* is generated as a single atomic token (Auxiliary + Participle), e.g., "ai mangé". Elisions (e.g., "J'aime") are treated as single units for fill-in-the-blank exercises.
+*   **Japanese Polarity**: The UI renders a specific 6-row vertical layout to accommodate the complexity of Plain vs. Polite forms across multiple tenses.
 
 ---
 
 ## 2. Profile Dashboard 2.0
 
-A data-rich modal accessible via the user avatar.
+A comprehensive, data-rich modal accessible via the user avatar, designed to visualize learning progress.
 
-### UI Interaction (Carousel)
--   **Layout**: A unified slider container displaying one metric at a time.
--   **Navigation**: Left/Right arrows + Dot indicators.
--   **Gestures**: Supports Touch Swipe on mobile devices.
+### Interaction Design
+*   **Carousel Navigation**: Unified slider container displaying one metric at a time, navigable via arrows or touch swipe gestures.
+*   **Smart Unlock System**:
+    *   **Locked State**: Tabs for unpracticed languages are hidden to reduce cognitive load.
+    *   **Empty State**: Encouraging prompts ("Complete your first lesson...") replace empty charts.
+    *   **Auto-Migration**: Legacy users are automatically migrated to the unlock system upon login.
 
-### Progression System (Unlock)
--   **Locked State**: Users only see tabs for languages they have actually practiced.
--   **Empty State**: "Complete your first lesson to visualize progress."
--   **Migration**: Existing users without the unlock flag are auto-migrated upon their next login/sync.
-
-### Charts
-1.  **Accuracy Trend**: Line chart of session accuracy over 3/7/30 days.
-2.  **Daily Volume**: Bar chart of verbs completed.
-3.  **Speed**: Line chart of average seconds per verb.
-4.  **Vocabulary Mastery (Word Cloud)**: Visualizes the `verb_stats` subcollection.
+### Visualization Metrics
+1.  **Accuracy Trend**: Line chart tracking session accuracy over 3, 7, and 30-day windows.
+2.  **Daily Volume**: Bar chart displaying the number of verbs completed per day.
+3.  **Speed Analysis**: Line chart tracking average time-to-completion (seconds per verb).
+4.  **Vocabulary Mastery**: A Word Cloud visualization of the `verb_stats` subcollection, highlighting most practiced verbs.
 
 ---
 
-## 3. Core Learning Loop (Updated)
+## 3. Core Learning Loop
 
-### Phase A: Authentication (Login)
--   **Dedicated Screen**: Separated from the language selection.
--   **Options**: Google Sign-In (Syncs data) or Guest Mode (Local only).
+The learning process is divided into five distinct phases to ensure focused practice.
 
-### Phase B: Language Selection
--   **Instruction Language**: Users can choose to receive explanations in English, Chinese, Portuguese, Spanish, etc.
--   **Action**: Selection triggers the blocking load of the *first* verb.
+### Phase A: Authentication
+*   **Dedicated Interface**: Separated from language selection for security and clarity.
+*   **Modes**:
+    *   **Google Sign-In**: Enables cloud sync and cross-device progress.
+    *   **Guest Mode**: Local-only session for immediate trial.
 
-### Phase C: Conjugation
--   **Mobile UX**: Users navigate tabs (Tenses) and must reach the end to see the "Finish" button.
--   **Feedback**: Instant Green/Red validation visuals.
+### Phase B: Context Setup
+*   **Language Selection**: User selects the target language.
+*   **Instruction Language**: User selects their preferred language for explanations (English, Chinese, etc.).
+*   **Trigger**: Selection initiates the blocking load of the first verb.
 
-### Phase D: Context Challenge
--   **Content**: 5 AI-generated sentences.
--   **Interaction**: Click words for translation tooltips.
--   **Completion**: Triggers the `saveSession` database event.
+### Phase C: Conjugation Practice
+*   **Interface**: Tabbed input system (Mobile) or Grid (Desktop).
+*   **Validation**: Real-time visual feedback (Green/Red) upon submission.
+*   **Constraint**: Users must complete all fields to proceed.
 
-### Phase E: Summary
--   **Modal**: Shows the Verb, Time Elapsed, and XP/Score.
--   **Transition**: "Next Verb" loads the pre-fetched data instantly.
+### Phase D: Contextual Application
+*   **Content**: 5 AI-generated sentences using the target verb.
+*   **Interaction**: Fill-in-the-blank mechanics with tooltip translations for every word.
+*   **Persistence**: Completion triggers the `saveSession` event, committing data to Firestore.
+
+### Phase E: Session Summary
+*   **Feedback**: Modal displaying the Verb, Time Elapsed, and XP earned.
+*   **Transition**: "Next Verb" button instantly loads the pre-fetched data for the next cycle.

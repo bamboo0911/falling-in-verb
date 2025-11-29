@@ -1,31 +1,31 @@
-# Database & Metrics Plan 📊
+# Database & Metrics Architecture 📊
 
 ## 1. Firestore Schema Design
 
-We utilize a **Dual-Layer + Aggregation** architecture to ensure fast reads for the dashboard while maintaining detailed logs for analysis.
+The database utilizes a **Dual-Layer + Aggregation** architecture to balance high-performance reads for the dashboard with granular logging for detailed analysis.
 
-### Collection: `users` (The Dashboard Snapshot)
+### Collection: `users` (Snapshot Layer)
 **Path:** `users/{uid}`
-**Purpose:** Stores accumulated stats for instant profile loading.
+**Purpose:** Stores high-level accumulated statistics for instant profile loading.
 
 ```typescript
 interface UserProfile {
   uid: string;
   // ...Auth fields
   
-  // Progression Logic
-  totalVerbsCompleted: number;  // The "Big Number" on the dashboard
-  lastActiveAt: Timestamp;      // For streak/retention tracking
+  // Progression Metrics
+  totalVerbsCompleted: number;  // Primary dashboard metric
+  lastActiveAt: Timestamp;      // Retention tracking
   
   // Unlock System
   currentLanguage: 'pt' | 'es' | 'jp' | 'fr';
-  unlockedLanguages: ['pt', 'fr']; // Dynamic list. Only languages practiced appear in UI.
+  unlockedLanguages: Array<'pt' | 'es' | 'jp' | 'fr'>; // Dynamic visibility
 }
 ```
 
-### Collection: `learning_logs` (The Timeline)
+### Collection: `learning_logs` (Timeline Layer)
 **Path:** `learning_logs/{logId}`
-**Purpose:** Detailed history used to draw the Line/Bar charts.
+**Purpose:** Granular history used to generate time-series visualizations (Line/Bar charts).
 
 ```typescript
 interface LearningLog {
@@ -34,72 +34,71 @@ interface LearningLog {
   language: string;
   verb: string;
   
-  // Performance Data
+  // Performance Metrics
   duration: number;       // Seconds
-  accuracy: number;       // 0.0 - 1.0 (Calculated dynamically)
+  accuracy: number;       // 0.0 - 1.0 (Calculated)
   mistakes: number;
-  totalQuestions: number; // Dynamic denominator
+  totalQuestions: number; // Dynamic denominator based on language
 }
 ```
 
-### Sub-Collection: `verb_stats` (The Word Cloud)
+### Sub-Collection: `verb_stats` (Aggregation Layer)
 **Path:** `users/{uid}/verb_stats/{verbId}`
-**Purpose:** Aggregated stats per word. Used to render the Word Cloud without querying thousands of logs.
+**Purpose:** Pre-aggregated statistics per word to enable efficient Word Cloud rendering without expensive queries.
 
 ```typescript
 interface VerbStat {
-  verb: "falar";
-  language: "pt";
-  count: 5;               // How many times practiced (Determines Font Size)
-  accumulatedAccuracy: 4.2; // Sum of accuracy scores
+  verb: string;         // e.g., "falar"
+  language: string;     // e.g., "pt"
+  count: number;        // Practice frequency (Determines Font Size)
+  accumulatedAccuracy: number; // Sum of accuracy scores
   lastPracticed: Timestamp;
 }
 ```
-*Note: Average Accuracy (Color) = `accumulatedAccuracy / count`*
+*Note: Average Accuracy (Color) is calculated as `accumulatedAccuracy / count`.*
 
 ---
 
 ## 2. Metric Calculation Logic
 
 ### A. Dynamic Accuracy Score
-Since different languages have different complexity, we cannot use a fixed denominator.
+To normalize performance across languages with varying complexity, we use a dynamic denominator.
 
 **Formula:**
 `Accuracy = (TotalQuestions - Mistakes) / TotalQuestions`
 
-**Where `TotalQuestions` varies by language:**
+**TotalQuestions Definitions:**
 *   **Portuguese (PT)**: 18 Tense Inputs + 5 Sentences = **23**
 *   **Spanish (ES)**: 15 Tense Inputs + 5 Sentences = **20**
 *   **French (FR)**: 18 Tense Inputs + 5 Sentences = **23**
 *   **Japanese (JP)**: 12 Tense Inputs + 5 Sentences = **17**
 
-This ensures a "90% Accuracy" means the same mastery level regardless of the language.
+This normalization ensures that "90% Accuracy" represents an equivalent mastery level regardless of the language structure.
 
 ### B. Word Cloud Visualization
-*   **Size (Frequency)**: Normalized between `0.8rem` and `2.0rem` based on the min/max `count` in the user's dataset.
-*   **Color (Mastery)**: Based on `Avg Accuracy`:
-    *   🔴 **< 20%**: Rose-500 (Critical)
-    *   🟠 **20-40%**: Rose-400 (Weak)
-    *   ⚪ **40-60%**: Stone-400 (Average)
-    *   🟢 **60-80%**: Emerald-400 (Good)
-    *   🌳 **> 80%**: Emerald-600 (Mastered)
+*   **Size (Frequency)**: Normalized between `0.8rem` and `2.0rem` based on the user's min/max `count`.
+*   **Color (Mastery)**: Derived from `Avg Accuracy`:
+    *   🔴 **< 20%**: Critical (Rose-500)
+    *   🟠 **20-40%**: Weak (Rose-400)
+    *   ⚪ **40-60%**: Average (Stone-400)
+    *   🟢 **60-80%**: Good (Emerald-400)
+    *   🌳 **> 80%**: Mastered (Emerald-600)
 
 ---
 
-## 3. Data Flow & Atomic Writes
+## 3. Data Consistency Strategy
 
-When a user finishes a session, we perform a **Batch Write** to ensure data consistency across all 3 collections.
+To ensure data integrity across the three layers, we utilize **Atomic Batch Writes**.
 
-**Event:** `dbService.saveSession()`
+**Transaction: `dbService.saveSession()`**
 
-1.  **Create Log**: New document in `learning_logs`.
+1.  **Create Log**: A new document is written to `learning_logs`.
 2.  **Update Profile**:
-    *   `totalVerbsCompleted`: `increment(1)`
-    *   `lastActiveAt`: `serverTimestamp()`
-    *   `unlockedLanguages`: `arrayUnion(currentLang)`
-3.  **Update Word Cloud**:
-    *   `count`: `increment(1)`
-    *   `accumulatedAccuracy`: `increment(sessionAccuracy)`
+    *   `totalVerbsCompleted`: Incremented by 1.
+    *   `lastActiveAt`: Updated to server timestamp.
+    *   `unlockedLanguages`: Current language added via `arrayUnion`.
+3.  **Update Aggregates**:
+    *   `count`: Incremented by 1.
+    *   `accumulatedAccuracy`: Incremented by the session accuracy.
 
-**Why Batch?**
-If the network fails, either everything saves or nothing saves. We never end up with a "Total Count" that doesn't match the actual number of logs.
+**Benefit**: This transactional approach ensures that the "Total Count" displayed on the dashboard always matches the actual number of logs, even in the event of network failure.
