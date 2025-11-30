@@ -13,6 +13,7 @@ interface Props {
   rowHeaderLabel?: string;
   onFinish?: () => void;
   uiLabels: any; // Accept translations
+  isJP?: boolean;
 }
 
 export const ConjugationTable: React.FC<Props> = ({
@@ -25,12 +26,13 @@ export const ConjugationTable: React.FC<Props> = ({
   tenseLabels,
   rowHeaderLabel = "Person",
   onFinish,
-  uiLabels
+  uiLabels,
+  isJP: isJPProp
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [jpTab, setJpTab] = useState('Plain'); // Specific state for JP tabs (Plain/Polite)
-  
-  const isJP = verbData.language === 'jp';
+
+  const isJP = isJPProp ?? verbData.language === 'jp';
 
   // Effect to reset to first tab on Review Mode
   React.useEffect(() => {
@@ -58,7 +60,7 @@ export const ConjugationTable: React.FC<Props> = ({
     if (!isReviewMode) return null;
     const userVal = (userInput[tense]?.[person] || "").trim().toLowerCase();
     const correctVal = verbData.tenses[tense]?.[person]?.toLowerCase() || "";
-    
+
     if (userVal === correctVal) {
       return <CheckCircleIcon className="w-5 h-5 text-emerald-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-80" />;
     }
@@ -68,8 +70,8 @@ export const ConjugationTable: React.FC<Props> = ({
   const getCorrectAnswerDisplay = (tense: string, person: string) => {
     if (!isReviewMode) return null;
     const userVal = (userInput[tense]?.[person] || "").trim().toLowerCase();
-    const correctVal = verbData.tenses[tense]?.[person] || ""; 
-    
+    const correctVal = verbData.tenses[tense]?.[person] || "";
+
     if (userVal !== correctVal.toLowerCase()) {
       return (
         <div className="text-xs text-rose-500 font-bold mt-1.5 px-2 py-1 bg-rose-50 rounded-lg w-fit shadow-sm animate-in fade-in slide-in-from-top-1 border border-rose-100">
@@ -90,7 +92,7 @@ export const ConjugationTable: React.FC<Props> = ({
 
   // Mobile Navigation Logic
   const isLastTab = activeTab === tenses.length - 1;
-  
+
   const handleMobileNext = () => {
     if (isLastTab) {
       console.log("[ConjugationTable] Mobile FINISH button clicked");
@@ -110,87 +112,87 @@ export const ConjugationTable: React.FC<Props> = ({
         {/* JP Toggle Tabs */}
         <div className="flex border-b border-stone-100 bg-stone-50/50 sticky top-0 z-20">
           {pronouns.map(p => (
-             <button
-               key={p}
-               onClick={() => {
-                 console.log(`[ConjugationTable] JP Tab switched to ${p}`);
-                 setJpTab(p);
-               }}
-               className={`flex-1 py-4 text-center font-bold text-lg transition-all relative
-                  ${jpTab === p 
-                    ? 'bg-white text-rose-400 shadow-[0_-2px_0_0_inset] shadow-rose-300' 
-                    : 'text-stone-400 hover:text-stone-500 hover:bg-stone-50'}
+            <button
+              key={p}
+              onClick={() => {
+                console.log(`[ConjugationTable] JP Tab switched to ${p}`);
+                setJpTab(p);
+              }}
+              className={`flex-1 py-4 text-center font-bold text-lg transition-all relative
+                  ${jpTab === p
+                  ? 'bg-white text-rose-400 shadow-[0_-2px_0_0_inset] shadow-rose-300'
+                  : 'text-stone-400 hover:text-stone-500 hover:bg-stone-50'}
                `}
-             >
-               {p === 'Plain' ? 'Plain (普通形)' : 'Polite (丁寧形)'}
-             </button>
+            >
+              {p === 'Plain' ? 'Plain (普通形)' : 'Polite (丁寧形)'}
+            </button>
           ))}
         </div>
-        
-        {/* Vertical List of Conjugations */}
-        <div id="mobile-card-content" className="p-4 sm:p-8 space-y-6 scroll-mt-28">
-          {tenses.map((tense, index) => {
-             const inputValue = userInput[tense]?.[jpTab] || "";
-             const correctVal = verbData.tenses[tense]?.[jpTab] || "";
-             const isCorrect = isReviewMode && inputValue.trim().toLowerCase() === correctVal.toLowerCase();
-             const isWrong = isReviewMode && !isCorrect;
 
-             return (
-               <div key={tense} className="group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
-                  <label className="block text-sm font-bold text-stone-400 mb-1.5 ml-1">
-                    {tenseLabels[tense]}
-                  </label>
-                  <div className="relative">
-                     <input
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => onInputChange(tense, jpTab, e.target.value)}
-                        disabled={isReviewMode}
-                        placeholder={isReviewMode ? "" : "..."}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="none"
-                        spellCheck="false"
-                        className={`w-full p-4 pr-10 rounded-2xl border transition-all outline-none font-medium
-                          text-xl font-japanese
+        {/* Vertical List of Conjugations */}
+        <div id="mobile-card-content" className="p-3 sm:p-6 space-y-3 scroll-mt-28">
+          {tenses.map((tense, index) => {
+            const inputValue = userInput[tense]?.[jpTab] || "";
+            const correctVal = verbData.tenses[tense]?.[jpTab] || "";
+            const isCorrect = isReviewMode && inputValue.trim().toLowerCase() === correctVal.toLowerCase();
+            const isWrong = isReviewMode && !isCorrect;
+
+            return (
+              <div key={tense} className="group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
+                <label className="block text-sm font-bold text-stone-400 mb-1.5 ml-1">
+                  {tenseLabels[tense]}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => onInputChange(tense, jpTab, e.target.value)}
+                    disabled={isReviewMode}
+                    placeholder={isReviewMode ? "" : "..."}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    className={`w-full p-3 pr-10 rounded-xl border transition-all outline-none font-medium
+                          text-lg font-japanese
                           ${isReviewMode && isCorrect ? "border-emerald-200 bg-emerald-50/50 text-emerald-700" : ""}
                           ${isReviewMode && isWrong ? "border-rose-200 bg-rose-50/50 text-rose-700" : ""}
                           ${!isReviewMode ? "border-stone-200 bg-stone-50/50 focus:bg-white focus:border-rose-300 focus:ring-4 focus:ring-rose-50 text-stone-600" : ""}
                         `}
-                      />
-                      {getFeedbackIcon(tense, jpTab)}
-                  </div>
-                  {getCorrectAnswerDisplay(tense, jpTab)}
-               </div>
-             );
+                  />
+                  {getFeedbackIcon(tense, jpTab)}
+                </div>
+                {getCorrectAnswerDisplay(tense, jpTab)}
+              </div>
+            );
           })}
-          
+
           {/* Mobile Footer Action Button for Japanese (Only show during Input Mode) */}
           {!isReviewMode && (
-             <div className="pt-6 pb-2">
-               <button
-                 onClick={() => {
-                    if (isJPLastTab) {
-                        console.log("[ConjugationTable] JP Mobile FINISH button clicked");
-                        if (onFinish) onFinish();
-                    } else {
-                        console.log("[ConjugationTable] JP Mobile NEXT tab clicked");
-                        setJpTab('Polite');
-                    }
-                 }}
-                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95
-                   ${isJPLastTab 
-                     ? 'bg-rose-200 text-rose-900 border border-rose-300 hover:bg-rose-300' 
-                     : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'}
+            <div className="pt-6 pb-2">
+              <button
+                onClick={() => {
+                  if (isJPLastTab) {
+                    console.log("[ConjugationTable] JP Mobile FINISH button clicked");
+                    if (onFinish) onFinish();
+                  } else {
+                    console.log("[ConjugationTable] JP Mobile NEXT tab clicked");
+                    setJpTab('Polite');
+                  }
+                }}
+                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95
+                   ${isJPLastTab
+                    ? 'bg-rose-200 text-rose-900 border border-rose-300 hover:bg-rose-300'
+                    : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'}
                  `}
-               >
-                 {isJPLastTab ? (
-                   <>{uiLabels.finish} <Check size={20} /></>
-                 ) : (
-                   <>{uiLabels.next}: Polite (丁寧形) <ChevronRight size={20} /></>
-                 )}
-               </button>
-             </div>
+              >
+                {isJPLastTab ? (
+                  <>{uiLabels.finish} <Check size={20} /></>
+                ) : (
+                  <>{uiLabels.next}: Polite (丁寧形) <ChevronRight size={20} /></>
+                )}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -278,13 +280,13 @@ export const ConjugationTable: React.FC<Props> = ({
         </div>
 
         {/* Mobile Content Area */}
-        <div id="mobile-card-content" className="p-5 space-y-6 scroll-mt-28">
+        <div id="mobile-card-content" className="p-3 space-y-3 scroll-mt-28">
           <div className="flex items-center justify-between">
             <h4 className="text-lg font-bold text-stone-600">{tenseLabels[tenses[activeTab]] || tenses[activeTab]}</h4>
             <div className="flex gap-1.5">
-               {tenses.map((_, i) => (
-                 <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === activeTab ? 'w-6 bg-rose-300' : 'w-1.5 bg-stone-200'}`} />
-               ))}
+              {tenses.map((_, i) => (
+                <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === activeTab ? 'w-6 bg-rose-300' : 'w-1.5 bg-stone-200'}`} />
+              ))}
             </div>
           </div>
 
@@ -311,7 +313,7 @@ export const ConjugationTable: React.FC<Props> = ({
                       autoCorrect="off"
                       autoCapitalize="none"
                       spellCheck="false"
-                      className={`w-full p-4 pr-10 rounded-2xl border transition-all outline-none font-medium text-lg
+                      className={`w-full p-3 pr-10 rounded-xl border transition-all outline-none font-medium text-base
                         ${isReviewMode && isCorrect ? "border-emerald-200 bg-emerald-50/50 text-emerald-700" : ""}
                         ${isReviewMode && isWrong ? "border-rose-200 bg-rose-50/50 text-rose-700" : ""}
                         ${!isReviewMode ? "border-stone-200 bg-stone-50/50 focus:bg-white focus:border-rose-300 focus:ring-4 focus:ring-rose-50 text-stone-600" : ""}
@@ -324,25 +326,25 @@ export const ConjugationTable: React.FC<Props> = ({
               );
             })}
           </div>
-          
+
           {/* Mobile Footer Action Button (Only show during Input Mode) */}
           {!isReviewMode && (
-             <div className="pt-6 pb-2">
-               <button
-                 onClick={handleMobileNext}
-                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95
-                   ${isLastTab 
-                     ? 'bg-rose-200 text-rose-900 border border-rose-300 hover:bg-rose-300' 
-                     : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'}
+            <div className="pt-6 pb-2">
+              <button
+                onClick={handleMobileNext}
+                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95
+                   ${isLastTab
+                    ? 'bg-rose-200 text-rose-900 border border-rose-300 hover:bg-rose-300'
+                    : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'}
                  `}
-               >
-                 {isLastTab ? (
-                   <>{uiLabels.finish} <Check size={20} /></>
-                 ) : (
-                   <>{uiLabels.next}: {tenseLabels[tenses[activeTab + 1]] || tenses[activeTab + 1]} <ChevronRight size={20} /></>
-                 )}
-               </button>
-             </div>
+              >
+                {isLastTab ? (
+                  <>{uiLabels.finish} <Check size={20} /></>
+                ) : (
+                  <>{uiLabels.next}: {tenseLabels[tenses[activeTab + 1]] || tenses[activeTab + 1]} <ChevronRight size={20} /></>
+                )}
+              </button>
+            </div>
           )}
         </div>
       </div>

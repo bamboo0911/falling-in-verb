@@ -26,8 +26,8 @@ export const Settings: React.FC<Props> = ({
   return (
     <div className="w-full max-w-2xl mx-auto p-4 md:p-6 space-y-8 animate-in fade-in duration-500 pb-24">
       <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-stone-700">Settings</h2>
-        <p className="text-stone-400 text-sm">Manage your preferences</p>
+        <h2 className="text-2xl font-bold text-stone-700">{uiLabels.settingsTitle}</h2>
+        <p className="text-stone-400 text-sm">{uiLabels.settingsSubtitle}</p>
       </div>
 
       {/* Account Section */}
@@ -45,9 +45,9 @@ export const Settings: React.FC<Props> = ({
             <p className="text-stone-400 text-sm">{user?.email || 'Not logged in'}</p>
           </div>
         </div>
-        
-        <button 
-          onClick={logout} 
+
+        <button
+          onClick={logout}
           className="w-full py-3 px-4 rounded-xl border border-rose-100 text-rose-500 font-bold hover:bg-rose-50 transition-colors flex items-center justify-center gap-2"
         >
           <LogOut size={18} /> {uiLabels.signOut}
@@ -58,9 +58,9 @@ export const Settings: React.FC<Props> = ({
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
         <div className="flex items-center gap-2 text-stone-600 font-bold border-b border-stone-50 pb-2">
           <Globe size={18} className="text-rose-400" />
-          <h3>Target Language</h3>
+          <h3>{uiLabels.targetLanguage}</h3>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Object.values(LANGUAGE_CONFIGS).map((config) => {
             const isActive = currentLanguage === config.id;
@@ -70,8 +70,8 @@ export const Settings: React.FC<Props> = ({
                 onClick={() => onLanguageChange(config.id)}
                 className={`
                   relative flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left
-                  ${isActive 
-                    ? 'border-rose-400 bg-rose-50/30' 
+                  ${isActive
+                    ? 'border-rose-400 bg-rose-50/30'
                     : 'border-stone-100 hover:border-rose-200 hover:bg-stone-50'}
                 `}
               >
@@ -94,9 +94,9 @@ export const Settings: React.FC<Props> = ({
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
         <div className="flex items-center gap-2 text-stone-600 font-bold border-b border-stone-50 pb-2">
           <MessageCircle size={18} className="text-rose-400" />
-          <h3>Explanation Language</h3>
+          <h3>{uiLabels.explanationLanguage}</h3>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2">
           {instructionLanguages.map((lang) => (
             <button
@@ -104,8 +104,8 @@ export const Settings: React.FC<Props> = ({
               onClick={() => onInstructionLangChange(lang.id)}
               className={`
                 py-2 px-3 rounded-xl text-sm font-medium transition-all border
-                ${instructionLang === lang.id 
-                  ? 'bg-stone-800 text-white border-stone-800' 
+                ${instructionLang === lang.id
+                  ? 'bg-stone-800 text-white border-stone-800'
                   : 'bg-white text-stone-500 border-stone-100 hover:border-stone-300'}
               `}
             >

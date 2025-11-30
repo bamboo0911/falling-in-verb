@@ -39,7 +39,7 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
                 if (token.isBlank) {
                   return (
                     <div key={idx} className="relative inline-flex flex-col min-w-[120px] md:min-w-[140px] mx-1 -my-1 align-middle">
-                       <input
+                      <input
                         type="text"
                         value={userVal}
                         onChange={(e) => onInputChange(sentence.id, e.target.value)}
@@ -97,14 +97,14 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
             </div>
 
             {isCorrect && (
-               <div className="mt-2 flex items-center gap-2 text-emerald-600 font-bold text-sm bg-emerald-50 px-3 py-1.5 rounded-xl inline-flex animate-in slide-in-from-left-2 border border-emerald-100">
-                 <CheckIcon size={16} /> {uiLabels.correct}
-               </div>
+              <div className="mt-2 flex items-center gap-2 text-emerald-600 font-bold text-sm bg-emerald-50 px-3 py-1.5 rounded-xl inline-flex animate-in slide-in-from-left-2 border border-emerald-100">
+                <CheckIcon size={16} /> {uiLabels.correct}
+              </div>
             )}
-             {isWrong && (
-               <div className="mt-2 flex items-center gap-2 text-rose-500 font-bold text-sm bg-rose-50 px-3 py-1.5 rounded-xl inline-flex animate-in slide-in-from-left-2 border border-rose-100">
-                 <XIcon size={16} /> {uiLabels.incorrect}
-               </div>
+            {isWrong && (
+              <div className="mt-2 flex items-center gap-2 text-rose-500 font-bold text-sm bg-rose-50 px-3 py-1.5 rounded-xl inline-flex animate-in slide-in-from-left-2 border border-rose-100">
+                <XIcon size={16} /> {uiLabels.incorrect}
+              </div>
             )}
           </div>
         );

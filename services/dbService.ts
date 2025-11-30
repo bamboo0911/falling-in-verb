@@ -12,6 +12,8 @@ export interface UserProfile {
   totalVerbsCompleted: number;
   currentLanguage: Language;
   unlockedLanguages: Language[];
+  instructionLanguage?: string;
+  hasCompletedOnboarding?: boolean;
 }
 
 export interface LearningLog {
@@ -38,6 +40,21 @@ export interface VerbStat {
   avgAccuracy: number;
 }
 
+// Simple in-memory cache
+const cache = {
+  dashboardStats: {} as Record<string, any>,
+  verbStats: {} as Record<string, any>,
+  recentLogs: {} as Record<string, any>,
+  userProfile: {} as Record<string, any>,
+};
+
+const clearCache = () => {
+  cache.dashboardStats = {};
+  cache.verbStats = {};
+  cache.recentLogs = {};
+  cache.userProfile = {};
+};
+
 export const dbService = {
   /**
    * Ensures the user profile exists in Firestore. 
@@ -62,41 +79,89 @@ export const dbService = {
           lastActiveAt: firebase.firestore.Timestamp.now(),
           totalVerbsCompleted: 0,
           currentLanguage: currentLanguage || 'pt', // Default fallback
-          unlockedLanguages: []
+          unlockedLanguages: [],
+          instructionLanguage: 'English',
+          hasCompletedOnboarding: false
         };
         await userRef.set(newProfile);
         return newProfile;
       } else {
         // Existing User
         const data = doc.data() as UserProfile;
-        
+
         // Migration: Ensure unlockedLanguages exists and is populated if user has history
         const hasHistory = (data?.totalVerbsCompleted || 0) > 0;
         const missingUnlocked = !data?.unlockedLanguages || (data?.unlockedLanguages.length === 0 && hasHistory);
-        
+
         // If currentLanguage is provided (e.g. from session), update it. Otherwise keep existing.
         const langToUpdate = currentLanguage || data.currentLanguage;
 
         if (missingUnlocked) {
-           // Auto-unlock current language for existing users
-           const unlocked = hasHistory && langToUpdate ? [langToUpdate] : [];
-           await userRef.update({
-              lastActiveAt: firebase.firestore.Timestamp.now(),
-              currentLanguage: langToUpdate,
-              unlockedLanguages: unlocked
-           });
-           return { ...data, lastActiveAt: firebase.firestore.Timestamp.now(), currentLanguage: langToUpdate, unlockedLanguages: unlocked };
+          // Auto-unlock current language for existing users
+          const unlocked = hasHistory && langToUpdate ? [langToUpdate] : [];
+          await userRef.update({
+            lastActiveAt: firebase.firestore.Timestamp.now(),
+            currentLanguage: langToUpdate,
+            unlockedLanguages: unlocked
+          });
+          return { ...data, lastActiveAt: firebase.firestore.Timestamp.now(), currentLanguage: langToUpdate, unlockedLanguages: unlocked };
         } else {
-           await userRef.update({
-              lastActiveAt: firebase.firestore.Timestamp.now(),
-              ...(currentLanguage ? { currentLanguage: currentLanguage } : {})
-           });
-           return { ...data, lastActiveAt: firebase.firestore.Timestamp.now(), ...(currentLanguage ? { currentLanguage } : {}) };
+          await userRef.update({
+            lastActiveAt: firebase.firestore.Timestamp.now(),
+            ...(currentLanguage ? { currentLanguage: currentLanguage } : {})
+          });
+          return { ...data, lastActiveAt: firebase.firestore.Timestamp.now(), ...(currentLanguage ? { currentLanguage } : {}) };
         }
       }
     } catch (error) {
       console.error("[DB] Error syncing profile:", error);
       return null;
+    }
+  },
+
+  /**
+   * Updates the user's current target language.
+   */
+  updateUserLanguage: async (userId: string, language: Language): Promise<void> => {
+    try {
+      await db.collection('users').doc(userId).update({
+        currentLanguage: language,
+        lastActiveAt: firebase.firestore.Timestamp.now()
+      });
+    } catch (error) {
+      console.error("[DB] Error updating user language:", error);
+    }
+  },
+
+  /**
+   * Updates the user's instruction language.
+   */
+  updateUserInstructionLanguage: async (userId: string, language: string): Promise<void> => {
+    try {
+      await db.collection('users').doc(userId).update({
+        instructionLanguage: language,
+        lastActiveAt: firebase.firestore.Timestamp.now()
+      });
+    } catch (error) {
+      console.error("[DB] Error updating instruction language:", error);
+    }
+  },
+
+  /**
+   * Updates the onboarding status.
+   */
+  completeOnboarding: async (userId: string): Promise<void> => {
+    try {
+      await db.collection('users').doc(userId).update({
+        hasCompletedOnboarding: true,
+        lastActiveAt: firebase.firestore.Timestamp.now()
+      });
+      // Update cache
+      if (cache.userProfile[userId]) {
+        cache.userProfile[userId].hasCompletedOnboarding = true;
+      }
+    } catch (error) {
+      console.error("[DB] Error completing onboarding:", error);
     }
   },
 
@@ -159,6 +224,9 @@ export const dbService = {
 
       await batch.commit();
       console.log(`[DB] Session saved successfully. Accuracy: ${(accuracy * 100).toFixed(1)}%`);
+
+      // Invalidate cache on new data
+      clearCache();
     } catch (error) {
       console.error("[DB] Error saving session:", error);
     }
@@ -168,9 +236,14 @@ export const dbService = {
    * Fetches the full user profile
    */
   getUserProfile: async (userId: string): Promise<UserProfile | null> => {
+    if (cache.userProfile[userId]) {
+      return cache.userProfile[userId];
+    }
     try {
       const doc = await db.collection('users').doc(userId).get();
-      return doc.exists ? (doc.data() as UserProfile) : null;
+      const data = doc.exists ? (doc.data() as UserProfile) : null;
+      if (data) cache.userProfile[userId] = data;
+      return data;
     } catch (error) {
       console.error("[DB] Error getting user profile:", error);
       return null;
@@ -184,10 +257,14 @@ export const dbService = {
    * This avoids "requires an index" errors for every language combination.
    */
   getDashboardStats: async (userId: string, days: number = 7, language?: Language): Promise<{ stats: DailyStat[], totalVerbs: number }> => {
+    const cacheKey = `${userId}-${days}-${language || 'all'}`;
+    if (cache.dashboardStats[cacheKey]) {
+      return cache.dashboardStats[cacheKey];
+    }
     try {
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days + 1); 
+      startDate.setDate(startDate.getDate() - days + 1);
       startDate.setHours(0, 0, 0, 0);
 
       // SIMPLIFIED QUERY: Only User + Timestamp
@@ -196,7 +273,7 @@ export const dbService = {
         .where('userId', '==', userId)
         .where('timestamp', '>=', startDate)
         .orderBy('timestamp', 'asc');
-      
+
       const logsSnap = await query.get();
 
       // Prepare grouping structure
@@ -212,13 +289,13 @@ export const dbService = {
 
       logsSnap.docs.forEach(doc => {
         const data = doc.data() as LearningLog;
-        
+
         // --- CLIENT-SIDE FILTERING ---
         if (language && data.language !== language) return;
 
         // Handle timestamp conversion safely
         const dateObj = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
-        
+
         // Use Local Date for grouping
         const y = dateObj.getFullYear();
         const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -234,8 +311,17 @@ export const dbService = {
         const logs = grouped[date];
         const count = logs.length;
         const avgAccuracy = count > 0 ? logs.reduce((sum, l) => sum + l.accuracy, 0) / count : 0;
-        const avgDuration = count > 0 ? logs.reduce((sum, l) => sum + l.duration, 0) / count : 0;
-        return { date, count, avgAccuracy, avgDuration };
+        const validDurationLogs = logs.filter(l => l.accuracy >= 0.3);
+        const avgDuration = validDurationLogs.length > 0
+          ? validDurationLogs.reduce((acc, curr) => acc + curr.duration, 0) / validDurationLogs.length
+          : 0;
+
+        return {
+          date: date,
+          count: logs.length,
+          avgAccuracy,
+          avgDuration
+        };
       });
 
       let totalVerbs = 0;
@@ -248,7 +334,9 @@ export const dbService = {
         totalVerbs = userDoc.exists ? (userDoc.data()?.totalVerbsCompleted || 0) : 0;
       }
 
-      return { stats, totalVerbs };
+      const result = { stats: stats.sort((a, b) => a.date.localeCompare(b.date)), totalVerbs };
+      cache.dashboardStats[cacheKey] = result;
+      return result;
     } catch (error) {
       console.error("[DB] Error fetching dashboard stats.", error);
       return { stats: [], totalVerbs: 0 };
@@ -260,11 +348,15 @@ export const dbService = {
    * STRATEGY: Fetch all verb stats for user, filter & sort in memory.
    */
   getVerbStats: async (userId: string, language: Language): Promise<VerbStat[]> => {
+    const cacheKey = `${userId}-${language || 'all'}`;
+    if (cache.verbStats[cacheKey]) {
+      return cache.verbStats[cacheKey];
+    }
     try {
       // NOTE: This requires the 'verb_stats' subcollection to be allowed in Security Rules
       const statsRef = db.collection('users').doc(userId).collection('verb_stats');
       const snapshot = await statsRef.get();
-        
+
       const allVerbs = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -276,11 +368,12 @@ export const dbService = {
       });
 
       // Client-Side Filter & Sort
-      return allVerbs
+      const result = allVerbs
         .filter(v => v.language === language)
         .sort((a, b) => b.count - a.count)
-        .slice(0, 50);
-
+        .slice(0, 50); // Top 50 verbs
+      cache.verbStats[cacheKey] = result;
+      return result;
     } catch (error) {
       console.error("[DB] Error fetching verb stats. Check Security Rules for subcollection.", error);
       return [];
@@ -292,6 +385,10 @@ export const dbService = {
    * STRATEGY: Client-Side Filtering
    */
   getRecentLogs: async (userId: string, language?: Language): Promise<LearningLog[]> => {
+    const cacheKey = `${userId}-${language || 'all'}`;
+    if (cache.recentLogs[cacheKey]) {
+      return cache.recentLogs[cacheKey];
+    }
     try {
       // Fetch more (100) to ensure we have enough after filtering
       const query = db.collection('learning_logs')
@@ -303,11 +400,10 @@ export const dbService = {
       const allLogs = snapshot.docs.map(doc => doc.data() as LearningLog);
 
       // Client-Side Filter
-      const filteredLogs = language 
-        ? allLogs.filter(log => log.language === language)
-        : allLogs;
-
-      return filteredLogs.slice(0, 20);
+      const filteredLogs = allLogs.filter(l => !language || l.language === language);
+      const result = filteredLogs.slice(0, 20);
+      cache.recentLogs[cacheKey] = result;
+      return result;
     } catch (error) {
       console.error("[DB] Error fetching recent logs.", error);
       return [];

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  AppPhase, 
-  VerbData, 
-  SentenceProblem, 
-  UserConjugationInput, 
+import {
+  AppPhase,
+  VerbData,
+  SentenceProblem,
+  UserConjugationInput,
   UserSentenceInput,
   Language,
   LANGUAGE_CONFIGS
@@ -18,6 +18,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { dbService } from './services/dbService';
 import { ProfileDashboard } from './components/ProfileDashboard';
 import { Settings } from './components/Settings';
+import { Tutorial } from './components/Tutorial';
 
 const INSTRUCTION_LANGUAGES = [
   { id: 'English', label: 'English', flag: '🇺🇸' },
@@ -28,7 +29,16 @@ const INSTRUCTION_LANGUAGES = [
   { id: 'French', label: 'Français', flag: '🇫🇷' },
 ];
 
-const UI_TRANSLATIONS: Record<string, any> = {
+const TARGET_LANGUAGE_NAMES: Record<string, Record<Language, string>> = {
+  'English': { pt: 'Portuguese (BR)', es: 'Spanish', fr: 'French', jp: 'Japanese' },
+  'Traditional Chinese': { pt: '葡萄牙語 (BR)', es: '西班牙語', fr: '法語', jp: '日語' },
+  'Japanese': { pt: 'ポルトガル語 (BR)', es: 'スペイン語', fr: 'フランス語', jp: '日本語' },
+  'Portuguese': { pt: 'Português (BR)', es: 'Espanhol', fr: 'Francês', jp: 'Japonês' },
+  'Spanish': { pt: 'Portugués (BR)', es: 'Español', fr: 'Francés', jp: 'Japonés' },
+  'French': { pt: 'Portugais (BR)', es: 'Espagnol', fr: 'Français', jp: 'Japonais' },
+};
+
+const UI_TEXT: Record<string, any> = {
   'English': {
     landingTitle: 'Pick a Language',
     landingSubtitle: 'Pick a language to start.',
@@ -71,7 +81,32 @@ const UI_TRANSLATIONS: Record<string, any> = {
     tabQuiz: 'Quiz',
     tabSettings: 'Settings',
     tutorialComingSoon: 'Lessons Coming Soon',
-    tutorialDesc: 'Structured lessons and grammar guides are under construction.'
+    tutorialDesc: 'Structured lessons and grammar guides are under construction.',
+    settingsTitle: 'Settings',
+    settingsSubtitle: 'Manage your preferences',
+    targetLanguage: 'Target Language',
+    explanationLanguage: 'Explanation Language',
+    yourProgress: 'Your Progress',
+    trackJourney: 'Track your learning journey',
+    select: 'Select',
+    locked: 'Locked',
+    loadingStats: 'Loading stats...',
+    noData: 'No Data Yet',
+    noDataDesc: 'Complete your first verb practice to visualize your progress here.',
+    days: 'Days',
+    total: 'Total',
+    recentAccuracy: 'Recent Accuracy',
+    swipeNavigate: 'Swipe to navigate',
+    recentActivity: 'Recent Activity',
+    noRecentActivity: 'No recent activity.',
+    perfect: 'Perfect',
+    err: 'err',
+    startPractice: 'Start Practice',
+    accuracyTrend: 'Accuracy Trend',
+    dailyVolume: 'Daily Volume',
+    avgTime: 'Avg. Time per Verb',
+    vocabMastery: 'Vocabulary Mastery',
+    verbs: 'Verbs'
   },
   'Traditional Chinese': {
     landingTitle: '選擇語言',
@@ -115,7 +150,32 @@ const UI_TRANSLATIONS: Record<string, any> = {
     tabQuiz: '測驗',
     tabSettings: '設定',
     tutorialComingSoon: '教學內容敬請期待',
-    tutorialDesc: '結構化的課程與文法指南正在建置中。'
+    tutorialDesc: '結構化的課程與文法指南正在建置中。',
+    settingsTitle: '設定',
+    settingsSubtitle: '管理您的偏好設定',
+    targetLanguage: '目標語言',
+    explanationLanguage: '解說語言',
+    yourProgress: '您的進度',
+    trackJourney: '追蹤您的學習歷程',
+    select: '選擇',
+    locked: '未解鎖',
+    loadingStats: '載入統計數據...',
+    noData: '尚無數據',
+    noDataDesc: '完成第一次動詞練習以在此查看您的進度。',
+    days: '天',
+    total: '總計',
+    recentAccuracy: '近期準確率',
+    swipeNavigate: '滑動以切換',
+    recentActivity: '近期活動',
+    noRecentActivity: '無近期活動。',
+    perfect: '完美',
+    err: '錯',
+    startPractice: '開始練習',
+    accuracyTrend: '準確率趨勢',
+    dailyVolume: '每日練習量',
+    avgTime: '平均每詞時間',
+    vocabMastery: '詞彙掌握度',
+    verbs: '動詞'
   },
   'Portuguese': {
     landingTitle: 'Escolha um Idioma',
@@ -159,7 +219,32 @@ const UI_TRANSLATIONS: Record<string, any> = {
     tabQuiz: 'Quiz',
     tabSettings: 'Configurações',
     tutorialComingSoon: 'Em breve',
-    tutorialDesc: 'Lições estruturadas e guias de gramática estão em construção.'
+    tutorialDesc: 'Lições estruturadas e guias de gramática estão em construção.',
+    settingsTitle: 'Configurações',
+    settingsSubtitle: 'Gerencie suas preferências',
+    targetLanguage: 'Idioma Alvo',
+    explanationLanguage: 'Idioma de Explicação',
+    yourProgress: 'Seu Progresso',
+    trackJourney: 'Acompanhe sua jornada',
+    select: 'Selecionar',
+    locked: 'Bloqueado',
+    loadingStats: 'Carregando estatísticas...',
+    noData: 'Sem Dados',
+    noDataDesc: 'Complete sua primeira prática de verbos para visualizar seu progresso aqui.',
+    days: 'Dias',
+    total: 'Total',
+    recentAccuracy: 'Precisão Recente',
+    swipeNavigate: 'Deslize para navegar',
+    recentActivity: 'Atividade Recente',
+    noRecentActivity: 'Nenhuma atividade recente.',
+    perfect: 'Perfeito',
+    err: 'err',
+    startPractice: 'Começar Prática',
+    accuracyTrend: 'Tendência de Precisão',
+    dailyVolume: 'Volume Diário',
+    avgTime: 'Tempo Médio',
+    vocabMastery: 'Domínio de Vocabulário',
+    verbs: 'Verbos'
   },
   'Spanish': {
     landingTitle: 'Elige un Idioma',
@@ -203,43 +288,68 @@ const UI_TRANSLATIONS: Record<string, any> = {
     tabQuiz: 'Quiz',
     tabSettings: 'Ajustes',
     tutorialComingSoon: 'Próximamente',
-    tutorialDesc: 'Lecciones estructuradas y guías de gramática están en construcción.'
+    tutorialDesc: 'Lecciones estructuradas y guías de gramática están en construcción.',
+    settingsTitle: 'Ajustes',
+    settingsSubtitle: 'Gestiona tus preferencias',
+    targetLanguage: 'Idioma Objetivo',
+    explanationLanguage: 'Idioma de Explicación',
+    yourProgress: 'Tu Progreso',
+    trackJourney: 'Sigue tu aprendizaje',
+    select: 'Seleccionar',
+    locked: 'Bloqueado',
+    loadingStats: 'Cargando estadísticas...',
+    noData: 'Sin Datos',
+    noDataDesc: 'Completa tu primera práctica de verbos para ver tu progreso aquí.',
+    days: 'Días',
+    total: 'Total',
+    recentAccuracy: 'Precisión Reciente',
+    swipeNavigate: 'Desliza para navegar',
+    recentActivity: 'Actividad Reciente',
+    noRecentActivity: 'Sin actividad reciente.',
+    perfect: 'Perfecto',
+    err: 'err',
+    startPractice: 'Empezar Práctica',
+    accuracyTrend: 'Tendencia de Precisión',
+    dailyVolume: 'Volumen Diario',
+    avgTime: 'Tiempo Promedio',
+    vocabMastery: 'Dominio de Vocabulario',
+    verbs: 'Verbos'
   },
   'Japanese': {
-    landingTitle: '言語を選択',
-    landingSubtitle: '学習する言語を選んでください。',
-    loadingFinding: '動詞を探しています...',
-    loadingSentences: '例文を作成中...',
+    landingTitle: '学習言語の選択',
+    landingSubtitle: '学びたい言語を選んでください。',
+    loadingFinding: '動詞を読み込み中...',
+    loadingSentences: '例文を生成中...',
     verbOfMoment: '今日の動詞',
     section1Header: '活用',
-    section1HeaderJP: '活用フォーム',
+    section1HeaderJP: '活用形',
     complete: '完了',
-    mistakes: 'ミス',
+    mistakes: '誤答数',
     checkAnswers: '答え合わせ',
     finish: '終了',
     next: '次へ',
-    startContext: '文脈練習を始める',
+    startContext: '実践問題へ',
     section2Header: '文脈チャレンジ',
-    contextInstructions: '正しい活用形を記入してください：',
-    tapWord: '単語をタップすると翻訳が表示されます。',
+    contextInstructions: '空欄に適切な活用形を入力してください：',
+    tapWord: '単語をタップして翻訳を表示',
     correct: '正解！',
     incorrect: '不正解',
     nextVerb: '次の動詞',
     nextVerbAction: '次の動詞',
     sessionComplete: 'セッション完了',
-    time: '時間',
+    time: 'タイム',
     part1: 'パート 1',
     part2: 'パート 2',
     connectionFailed: '接続失敗',
     tryAgain: '再試行',
-    skipVerb: 'この動詞をスキップ',
+    skipVerb: 'スキップ',
     letsGo: "スタート！",
     loginGoogle: 'Googleでログイン',
-    guest: 'ゲストとして続ける',
+    guest: 'ゲストとして利用',
     welcome: 'ようこそ',
     signOut: 'ログアウト',
     signIn: 'ログイン',
-    loginMarketing: '進捗を保存して学習を続けましょう。',
+    loginMarketing: 'ログインして学習記録を保存しましょう。',
     loginTitle: '動詞マスター',
     changeLanguage: '言語を変更',
     tabTutorial: 'チュートリアル',
@@ -247,7 +357,32 @@ const UI_TRANSLATIONS: Record<string, any> = {
     tabQuiz: 'クイズ',
     tabSettings: '設定',
     tutorialComingSoon: '近日公開',
-    tutorialDesc: '体系的なレッスンと文法ガイドを作成中です。'
+    tutorialDesc: '体系的なレッスンと文法ガイドを作成中です。',
+    settingsTitle: '設定',
+    settingsSubtitle: 'アプリの設定',
+    targetLanguage: '学習言語',
+    explanationLanguage: '解説言語',
+    yourProgress: '学習データ',
+    trackJourney: '学習の進捗を確認',
+    select: '選択',
+    locked: '未解禁',
+    loadingStats: 'データを読み込み中...',
+    noData: 'データなし',
+    noDataDesc: '練習を開始すると、ここにデータが表示されます。',
+    days: '日間',
+    total: '累計',
+    recentAccuracy: '最近の正解率',
+    swipeNavigate: 'スワイプで切替',
+    recentActivity: '最近の活動',
+    noRecentActivity: '履歴がありません。',
+    perfect: '全問正解',
+    err: '誤',
+    startPractice: '練習スタート',
+    accuracyTrend: '正解率の推移',
+    dailyVolume: '学習量',
+    avgTime: '平均回答時間',
+    vocabMastery: '語彙の定着度',
+    verbs: '語'
   },
   'French': {
     landingTitle: 'Choisissez une langue',
@@ -291,7 +426,32 @@ const UI_TRANSLATIONS: Record<string, any> = {
     tabQuiz: 'Quiz',
     tabSettings: 'Paramètres',
     tutorialComingSoon: 'Bientôt disponible',
-    tutorialDesc: 'Des leçons structurées et des guides de grammaire sont en construction.'
+    tutorialDesc: 'Des leçons structurées et des guides de grammaire sont en construction.',
+    settingsTitle: 'Paramètres',
+    settingsSubtitle: 'Gérer vos préférences',
+    targetLanguage: 'Langue Cible',
+    explanationLanguage: 'Langue d\'Explication',
+    yourProgress: 'Votre Progrès',
+    trackJourney: 'Suivez votre parcours',
+    select: 'Sélectionner',
+    locked: 'Verrouillé',
+    loadingStats: 'Chargement des statistiques...',
+    noData: 'Pas de Données',
+    noDataDesc: 'Terminez votre première pratique de verbe pour visualiser vos progrès ici.',
+    days: 'Jours',
+    total: 'Total',
+    recentAccuracy: 'Précision Récente',
+    swipeNavigate: 'Glisser pour naviguer',
+    recentActivity: 'Activité Récente',
+    noRecentActivity: 'Aucune activité récente.',
+    perfect: 'Parfait',
+    err: 'err',
+    startPractice: 'Commencer la Pratique',
+    accuracyTrend: 'Tendance de Précision',
+    dailyVolume: 'Volume Quotidien',
+    avgTime: 'Temps Moyen',
+    vocabMastery: 'Maîtrise du Vocabulaire',
+    verbs: 'Verbes'
   }
 };
 
@@ -311,22 +471,22 @@ type Tab = 'tutorial' | 'home' | 'quiz' | 'settings';
 
 function AppContent() {
   const { user, signInWithGoogle, loading: authLoading } = useAuth();
-  
+
   // App State
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [language, setLanguage] = useState<Language | null>(null);
-  const [instructionLang, setInstructionLang] = useState<string>('Traditional Chinese'); 
+  const [instructionLang, setInstructionLang] = useState<string>('Traditional Chinese');
   const [phase, setPhase] = useState<AppPhase>(AppPhase.LOGIN);
-  
+
   // Learning Data
   const [verbData, setVerbData] = useState<VerbData | null>(null);
   const [sentences, setSentences] = useState<SentenceProblem[]>([]);
-  
+
   // UI State
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(false);
-  
+
   // User Inputs
   const [conjugationInput, setConjugationInput] = useState<UserConjugationInput>({});
   const [sentenceInput, setSentenceInput] = useState<UserSentenceInput>({});
@@ -343,13 +503,16 @@ function AppContent() {
 
   // Summary Modal State
   const [showSummaryModal, setShowSummaryModal] = useState(false);
-  
+
   // Refs for prefetching
   const sentencePromiseRef = useRef<Promise<SentenceProblem[]> | null>(null);
   const nextVerbPromiseRef = useRef<Promise<VerbData> | null>(null);
 
+  // Onboarding State
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   // Helper to get current UI labels
-  const ui = UI_TRANSLATIONS[instructionLang] || UI_TRANSLATIONS['English'];
+  const ui = UI_TEXT[instructionLang] || UI_TEXT['English'];
 
   // Auth & Routing Logic
   useEffect(() => {
@@ -358,17 +521,29 @@ function AppContent() {
         if (user) {
           // User logged in
           if (phase === AppPhase.LOGIN) {
-             const profile = await dbService.syncUserProfile(user);
-             setIsGuest(false);
-             
-             // Route based on whether they have a current language
-             if (profile && profile.currentLanguage) {
-               setLanguage(profile.currentLanguage);
-               setActiveTab('home');
-               setPhase(AppPhase.DASHBOARD);
-             } else {
-               setPhase(AppPhase.LANGUAGE_SELECTION);
-             }
+            const profile = await dbService.syncUserProfile(user);
+            setIsGuest(false);
+
+            // Route based on whether they have a current language
+            if (profile && profile.currentLanguage) {
+              setLanguage(profile.currentLanguage);
+              if (profile.instructionLanguage) {
+                setInstructionLang(profile.instructionLanguage);
+                setActiveTab('home');
+                setPhase(AppPhase.DASHBOARD);
+
+                // Check onboarding
+                if (!profile.hasCompletedOnboarding) {
+                  setShowOnboarding(true);
+                }
+              } else {
+                // Existing user but no instruction language set (migration case)
+                setPhase(AppPhase.EXPLANATION_LANGUAGE_SELECTION);
+              }
+            } else {
+              // New user
+              setPhase(AppPhase.EXPLANATION_LANGUAGE_SELECTION);
+            }
           }
         } else if (!isGuest && phase !== AppPhase.LOGIN) {
           // User logged out
@@ -423,7 +598,7 @@ function AppContent() {
 
   const handleGuestEntry = () => {
     setIsGuest(true);
-    setPhase(AppPhase.LANGUAGE_SELECTION);
+    setPhase(AppPhase.EXPLANATION_LANGUAGE_SELECTION);
   };
 
   const handleHeaderLogoClick = () => {
@@ -459,13 +634,13 @@ function AppContent() {
     setFinalTime(null);
     setStartTime(null);
     setShowSummaryModal(false);
-    
+
     // Ensure we are on the Quiz tab when loading a lesson
     setActiveTab('quiz');
-    
+
     try {
       let data: VerbData;
-      
+
       if (nextVerbPromiseRef.current && !isFirstLoad) {
         data = await nextVerbPromiseRef.current;
       } else {
@@ -489,15 +664,47 @@ function AppContent() {
 
   const selectLanguage = (lang: Language) => {
     setLanguage(lang);
-    // When selecting language for the first time, load a verb immediately
-    loadNewVerb(lang, true);
+    if (user) {
+      dbService.updateUserLanguage(user.uid, lang);
+      // Check if they have completed onboarding
+      dbService.getUserProfile(user.uid).then(p => {
+        if (p && !p.hasCompletedOnboarding) {
+          setShowOnboarding(true);
+        }
+      });
+    } else {
+      // Guest: Always show onboarding
+      setShowOnboarding(true);
+    }
+    setActiveTab('home');
+    setPhase(AppPhase.DASHBOARD);
   };
 
   const changeLearningLanguage = (lang: Language) => {
     setLanguage(lang);
-    // Just change the state, don't start immediately unless requested?
-    // Let's assume user wants to switch context but might stay on settings.
-    // If they go to Home/Tutorial, it uses this new language.
+
+    // Clear current quiz data so we don't show old language data
+    setVerbData(null);
+    setSentences([]);
+    nextVerbPromiseRef.current = null;
+    sentencePromiseRef.current = null;
+
+    // Persist if logged in
+    if (user) {
+      dbService.updateUserLanguage(user.uid, lang);
+    }
+  };
+
+  const handleInstructionLangChange = (lang: string) => {
+    setInstructionLang(lang);
+    if (user) {
+      dbService.updateUserInstructionLanguage(user.uid, lang);
+    }
+    // Clear current quiz data to force refresh with new instruction language
+    setVerbData(null);
+    setSentences([]);
+    nextVerbPromiseRef.current = null;
+    sentencePromiseRef.current = null;
   };
 
   // --- APP PHASE HANDLING ---
@@ -514,9 +721,9 @@ function AppContent() {
     if (verbData) {
       Object.keys(verbData.tenses).forEach(tense => {
         Object.keys(verbData.tenses[tense]).forEach(person => {
-           const userVal = conjugationInput[tense]?.[person]?.trim().toLowerCase() || "";
-           const correctVal = verbData.tenses[tense][person].trim().toLowerCase();
-           if (userVal !== correctVal) mistakes++;
+          const userVal = conjugationInput[tense]?.[person]?.trim().toLowerCase() || "";
+          const correctVal = verbData.tenses[tense][person].trim().toLowerCase();
+          if (userVal !== correctVal) mistakes++;
         });
       });
     }
@@ -549,7 +756,7 @@ function AppContent() {
 
   const checkSentences = () => {
     setPhase(AppPhase.SENTENCE_REVIEW);
-    
+
     // Time & Score
     let elapsedSeconds = 0;
     if (startTime) {
@@ -557,7 +764,7 @@ function AppContent() {
       setFinalTime(formatElapsedTime(startTime));
       elapsedSeconds = Math.floor((now - startTime) / 1000);
     }
-    
+
     let mistakes = 0;
     sentences.forEach(s => {
       const userVal = sentenceInput[s.id]?.trim().toLowerCase() || "";
@@ -596,9 +803,9 @@ function AppContent() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-50/80 backdrop-blur-sm animate-in fade-in duration-300">
         <div className="scale-150 transform transition-all duration-300 animate-bounce">
-           <span className={`font-black text-rose-300 drop-shadow-sm font-sans ${countdownVal === 0 ? 'text-5xl md:text-6xl' : 'text-8xl'}`}>
-             {countdownVal > 0 ? countdownVal : ui.letsGo}
-           </span>
+          <span className={`font-black text-rose-300 drop-shadow-sm font-sans ${countdownVal === 0 ? 'text-5xl md:text-6xl' : 'text-8xl'}`}>
+            {countdownVal > 0 ? countdownVal : ui.letsGo}
+          </span>
         </div>
       </div>
     );
@@ -610,48 +817,48 @@ function AppContent() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
         <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl border border-rose-100 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
-           {/* ... Summary Content ... */}
-           <div className="text-center space-y-2">
-             <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-2 border border-rose-100 shadow-sm">
-               <span className="text-3xl filter drop-shadow-sm grayscale-0">{currentFlag}</span>
-             </div>
-             <p className="text-stone-400 font-bold uppercase tracking-wider text-xs">{ui.sessionComplete}</p>
-             <h2 className="text-3xl font-bold text-stone-700">{verbData.verb}</h2>
-             <p className="text-rose-400 font-medium">{verbData.englishMeaning}</p>
-           </div>
+          {/* ... Summary Content ... */}
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-2 border border-rose-100 shadow-sm">
+              <span className="text-3xl filter drop-shadow-sm grayscale-0">{currentFlag}</span>
+            </div>
+            <p className="text-stone-400 font-bold uppercase tracking-wider text-xs">{ui.sessionComplete}</p>
+            <h2 className="text-3xl font-bold text-stone-700">{verbData.verb}</h2>
+            <p className="text-rose-400 font-medium">{verbData.englishMeaning}</p>
+          </div>
 
-           <div className="grid grid-cols-2 gap-3 w-full">
-             <div className="col-span-2 bg-stone-50 p-4 rounded-2xl flex items-center justify-between border border-stone-100">
-                <div className="flex items-center gap-2 text-stone-500 font-bold text-sm">
-                  <Timer size={18} /> {ui.time}
-                </div>
-                <span className="text-xl font-bold text-stone-700">{finalTime || "0:00"}</span>
-             </div>
-             {/* Stats badges */}
-             <div className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-1 border ${conjugationErrors === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-                <span className={`text-xs font-bold uppercase ${conjugationErrors === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{ui.part1}</span>
-                {conjugationErrors === 0 ? <CheckCircle size={28} className="text-emerald-500" /> : <span className="text-2xl font-bold text-rose-500">-{conjugationErrors}</span>}
-             </div>
-             <div className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-1 border ${sentenceErrors === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-                <span className={`text-xs font-bold uppercase ${sentenceErrors === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{ui.part2}</span>
-                {sentenceErrors === 0 ? <CheckCircle size={28} className="text-emerald-500" /> : <span className="text-2xl font-bold text-rose-500">-{sentenceErrors}</span>}
-             </div>
-           </div>
+          <div className="grid grid-cols-2 gap-3 w-full">
+            <div className="col-span-2 bg-stone-50 p-4 rounded-2xl flex items-center justify-between border border-stone-100">
+              <div className="flex items-center gap-2 text-stone-500 font-bold text-sm">
+                <Timer size={18} /> {ui.time}
+              </div>
+              <span className="text-xl font-bold text-stone-700">{finalTime || "0:00"}</span>
+            </div>
+            {/* Stats badges */}
+            <div className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-1 border ${conjugationErrors === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+              <span className={`text-xs font-bold uppercase ${conjugationErrors === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{ui.part1}</span>
+              {conjugationErrors === 0 ? <CheckCircle size={28} className="text-emerald-500" /> : <span className="text-2xl font-bold text-rose-500">-{conjugationErrors}</span>}
+            </div>
+            <div className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-1 border ${sentenceErrors === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+              <span className={`text-xs font-bold uppercase ${sentenceErrors === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{ui.part2}</span>
+              {sentenceErrors === 0 ? <CheckCircle size={28} className="text-emerald-500" /> : <span className="text-2xl font-bold text-rose-500">-{sentenceErrors}</span>}
+            </div>
+          </div>
 
-           <div className="w-full space-y-2">
-             <button 
-               onClick={handleNextCycle}
-               className="w-full bg-rose-500 text-white py-3 rounded-2xl font-bold text-lg shadow-lg shadow-rose-200 hover:bg-rose-600 active:scale-95 transition-all flex items-center justify-center gap-2"
-             >
-               {ui.nextVerbAction} <Play size={20} fill="currentColor" />
-             </button>
-             <button 
-               onClick={handleSummaryContinue}
-               className="w-full bg-white text-stone-400 py-2 rounded-xl font-bold text-sm hover:text-stone-600 transition-colors"
-             >
-               Return to Dashboard
-             </button>
-           </div>
+          <div className="w-full space-y-2">
+            <button
+              onClick={handleNextCycle}
+              className="w-full bg-rose-500 text-white py-3 rounded-2xl font-bold text-lg shadow-lg shadow-rose-200 hover:bg-rose-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              {ui.nextVerbAction} <Play size={20} fill="currentColor" />
+            </button>
+            <button
+              onClick={handleSummaryContinue}
+              className="w-full bg-white text-stone-400 py-2 rounded-xl font-bold text-sm hover:text-stone-600 transition-colors"
+            >
+              Return to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -665,16 +872,16 @@ function AppContent() {
             <Logo className="w-full h-full drop-shadow-2xl" />
           </div>
           <div>
-             <h1 className="text-4xl font-black text-stone-700 tracking-tight mb-2">{ui.loginTitle}</h1>
-             <p className="text-lg text-rose-400 font-medium">{ui.loginMarketing}</p>
+            <h1 className="text-4xl font-black text-stone-700 tracking-tight mb-2">{ui.loginTitle}</h1>
+            <p className="text-lg text-rose-400 font-medium">{ui.loginMarketing}</p>
           </div>
         </div>
         <div className="space-y-4 pt-4">
-           <button onClick={handleSignIn} className="w-full bg-white text-stone-600 border border-stone-200 hover:border-rose-200 hover:bg-rose-50 py-4 px-6 rounded-2xl font-bold shadow-lg shadow-rose-50 hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 group">
-             <GoogleIcon /> <span className="group-hover:text-rose-500 transition-colors">{ui.loginGoogle}</span>
-           </button>
-           <button onClick={handleGuestEntry} className="text-stone-400 hover:text-stone-600 font-bold text-sm hover:underline underline-offset-4 transition-colors">{ui.guest}</button>
-           {authError && <div className="bg-rose-50 border border-rose-100 text-rose-500 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2"><AlertCircle size={16} />{authError}</div>}
+          <button onClick={handleSignIn} className="w-full bg-white text-stone-600 border border-stone-200 hover:border-rose-200 hover:bg-rose-50 py-4 px-6 rounded-2xl font-bold shadow-lg shadow-rose-50 hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 group">
+            <GoogleIcon /> <span className="group-hover:text-rose-500 transition-colors">{ui.loginGoogle}</span>
+          </button>
+          <button onClick={handleGuestEntry} className="text-stone-400 hover:text-stone-600 font-bold text-sm hover:underline underline-offset-4 transition-colors">{ui.guest}</button>
+          {authError && <div className="bg-rose-50 border border-rose-100 text-rose-500 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2"><AlertCircle size={16} />{authError}</div>}
         </div>
       </div>
     </div>
@@ -687,7 +894,7 @@ function AppContent() {
           <Logo className="w-8 h-8 rounded-lg shadow-sm" />
           <h1 className="text-lg md:text-xl font-bold tracking-tight text-rose-900/90">Falling In Verb</h1>
         </div>
-        <button 
+        <button
           onClick={() => setActiveTab('settings')}
           className={`p-2 rounded-full transition-colors ${activeTab === 'settings' ? 'text-rose-500 bg-rose-50' : 'text-rose-900/60 hover:bg-rose-50 hover:text-rose-500'}`}
         >
@@ -707,15 +914,52 @@ function AppContent() {
           <h2 className="text-3xl font-bold text-stone-700 tracking-tight">{ui.landingTitle}</h2>
           <p className="text-stone-400 text-lg">{ui.landingSubtitle}</p>
         </div>
-        
+
         {user && <div className="pb-4 animate-in fade-in slide-in-from-bottom-2"><p className="text-stone-500 font-medium">{ui.welcome}, <span className="text-rose-500 font-bold">{user.displayName}</span>!</p></div>}
 
         <div className="grid grid-cols-1 gap-4">
-          {Object.values(LANGUAGE_CONFIGS).map(conf => (
-            <button key={conf.id} onClick={() => selectLanguage(conf.id)} className="group relative flex items-center p-5 bg-white border border-rose-100 hover:border-rose-300 rounded-2xl shadow-sm hover:shadow-md hover:shadow-rose-50 transition-all text-left">
-              <span className="text-3xl mr-5 group-hover:scale-110 transition-transform opacity-90">{conf.flag}</span>
-              <div><h3 className="font-bold text-stone-700 text-lg group-hover:text-rose-500 transition-colors">{conf.name}</h3></div>
-              <ArrowRight className="ml-auto text-rose-200 group-hover:text-rose-400 transition-colors" />
+          {Object.values(LANGUAGE_CONFIGS).map(conf => {
+            const localizedName = TARGET_LANGUAGE_NAMES[instructionLang]?.[conf.id] || conf.name;
+            return (
+              <button key={conf.id} onClick={() => selectLanguage(conf.id)} className="group relative flex items-center p-5 bg-white border border-rose-100 hover:border-rose-300 rounded-2xl shadow-sm hover:shadow-md hover:shadow-rose-50 transition-all text-left">
+                <span className="text-3xl mr-5 group-hover:scale-110 transition-transform opacity-90">{conf.flag}</span>
+                <div><h3 className="font-bold text-stone-700 text-lg group-hover:text-rose-500 transition-colors">{localizedName}</h3></div>
+                <ArrowRight className="ml-auto text-rose-200 group-hover:text-rose-400 transition-colors" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderExplanationLanguageSelection = () => (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center space-y-2">
+          <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+            <Globe size={40} className="text-rose-400" />
+          </div>
+          <h1 className="text-3xl font-black text-stone-700 tracking-tight">Explanation Language</h1>
+          <p className="text-stone-400 font-medium">Which language should we use to explain things?</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          {INSTRUCTION_LANGUAGES.map(lang => (
+            <button
+              key={lang.id}
+              onClick={() => {
+                handleInstructionLangChange(lang.id);
+                setPhase(AppPhase.LANGUAGE_SELECTION);
+              }}
+              className="group relative flex items-center p-4 bg-white border border-stone-200 hover:border-rose-300 rounded-2xl shadow-sm hover:shadow-md hover:shadow-rose-50 transition-all text-left"
+            >
+              <span className="text-2xl mr-4 group-hover:scale-110 transition-transform">{lang.flag}</span>
+              <div>
+                <h3 className="font-bold text-stone-700 text-lg group-hover:text-rose-500 transition-colors">{lang.label}</h3>
+                <p className="text-xs text-stone-400">{lang.id}</p>
+              </div>
+              <ArrowRight className="ml-auto text-stone-200 group-hover:text-rose-400 transition-colors" />
             </button>
           ))}
         </div>
@@ -725,55 +969,85 @@ function AppContent() {
 
   const renderDashboardPage = () => (
     <div className="flex-1 flex flex-col items-center w-full max-w-4xl mx-auto p-4 md:p-6 pb-safe">
-        <ProfileDashboard 
-            variant="page" 
-            onStart={(lang) => {
-                setLanguage(lang);
-                // Switch tab to quiz and load the verb
-                setActiveTab('quiz');
-                loadNewVerb(lang, true);
-            }} 
-        />
+      <ProfileDashboard
+        variant="page"
+        onStart={(lang) => {
+          setLanguage(lang);
+          // Switch tab to quiz and load the verb
+          setActiveTab('quiz');
+          loadNewVerb(lang, true);
+        }}
+        uiLabels={ui}
+      />
     </div>
   );
 
   const renderTutorialPlaceholder = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 animate-in fade-in">
-        <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center text-rose-300 mb-2">
-            <BookOpen size={48} />
-        </div>
-        <div className="space-y-2">
-            <h3 className="text-2xl font-bold text-stone-600">{ui.tutorialComingSoon}</h3>
-            <p className="text-stone-400 max-w-xs mx-auto leading-relaxed">{ui.tutorialDesc}</p>
-        </div>
+      <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center text-rose-300 mb-2">
+        <BookOpen size={48} />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-2xl font-bold text-stone-600">{ui.tutorialComingSoon}</h3>
+        <p className="text-stone-400 max-w-xs mx-auto leading-relaxed">{ui.tutorialDesc}</p>
+      </div>
+    </div>
+  );
+
+  const renderTutorial = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+      <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 h-[80vh]">
+        <Tutorial
+          onFinish={() => {
+            setShowOnboarding(false);
+            if (user) {
+              dbService.completeOnboarding(user.uid);
+            } else {
+              localStorage.setItem('hasCompletedOnboarding', 'true');
+            }
+          }}
+          uiLabels={ui}
+          explanationLanguage={instructionLang}
+          targetLanguage={language}
+        />
+      </div>
     </div>
   );
 
   const renderError = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in">
-       <div className="bg-white p-8 rounded-3xl shadow-sm border border-rose-100 text-center max-w-sm w-full space-y-4">
-          <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-400">
-             {error?.includes("Network") ? <WifiOff size={32} /> : <AlertCircle size={32} />}
-          </div>
-          <div className="space-y-2">
-             <h3 className="text-xl font-bold text-stone-700">{ui.connectionFailed}</h3>
-             <p className="text-stone-500 text-sm leading-relaxed">{error}</p>
-          </div>
-          <button onClick={retry} className="w-full bg-rose-200 text-rose-900 py-3 rounded-xl font-bold hover:bg-rose-300 transition-colors">{ui.tryAgain}</button>
-       </div>
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-rose-100 text-center max-w-sm w-full space-y-4">
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-400">
+          {error?.includes("Network") ? <WifiOff size={32} /> : <AlertCircle size={32} />}
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-stone-700">{ui.connectionFailed}</h3>
+          <p className="text-stone-500 text-sm leading-relaxed">{error}</p>
+        </div>
+        <button onClick={retry} className="w-full bg-rose-200 text-rose-900 py-3 rounded-xl font-bold hover:bg-rose-300 transition-colors">{ui.tryAgain}</button>
+      </div>
     </div>
   );
 
   const renderPracticePage = () => {
     // If no verb loaded yet, show loading or empty state
     if (phase === AppPhase.LOADING_VERB) {
-        return <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]"><LoadingSpinner message={ui.loadingFinding} /></div>;
+      return <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]"><LoadingSpinner message={ui.loadingFinding} /></div>;
     }
-    
+
     // If no verb data at all (and not loading), maybe user needs to select language or just start
-    if (!verbData || !language) {
-       // This can happen if user clicks "Quiz" tab directly without selecting a language
-       return renderLanguageSelection();
+    if (!language) {
+      // This can happen if user clicks "Quiz" tab directly without selecting a language
+      return renderLanguageSelection();
+    }
+
+    // If language is set but no verb data, we should be loading or showing a start state.
+    // Since we handled LOADING_VERB above, this means we are in a state where we should load.
+    if (!verbData) {
+      // Auto-recover: load a verb if we have a language but no data
+      // Use a timeout to avoid render-cycle side-effects
+      setTimeout(() => loadNewVerb(language), 0);
+      return <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]"><LoadingSpinner message={ui.loadingFinding} /></div>;
     }
 
     // Otherwise render the practice flow
@@ -785,15 +1059,14 @@ function AppContent() {
       <main className={`flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 md:pb-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-safe pb-24`}>
         <section id="conjugation-card" className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-rose-100 text-center space-y-3 relative overflow-hidden group">
           <div className="absolute top-4 right-4 z-20">
-             <button onClick={handleNextCycle} className="p-3 text-stone-300 hover:text-rose-500 bg-white border border-stone-100 hover:border-rose-200 hover:bg-rose-50 rounded-2xl transition-all shadow-sm active:scale-95 flex items-center gap-2" title={ui.skipVerb}><RotateCw size={20} /></button>
+            <button onClick={handleNextCycle} className="p-3 text-stone-300 hover:text-rose-500 bg-white border border-stone-100 hover:border-rose-200 hover:bg-rose-50 rounded-2xl transition-all shadow-sm active:scale-95 flex items-center gap-2" title={ui.skipVerb}><RotateCw size={20} /></button>
           </div>
           <div className="flex flex-col items-center gap-2 mb-4 relative z-10">
-             <span className="inline-block px-3 py-1 bg-rose-50 text-rose-400 text-xs font-bold rounded-full uppercase tracking-wider border border-rose-100">{ui.verbOfMoment}</span>
-             {verbData.verbGroup && <span className="inline-block px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold rounded uppercase tracking-wider">{verbData.verbGroup}</span>}
+            {verbData.verbGroup && <span className="inline-block px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold rounded uppercase tracking-wider">{verbData.verbGroup}</span>}
           </div>
           <div className="space-y-1 relative z-10">
-             {verbData.reading && <p className="text-lg text-rose-400 font-medium font-japanese">{verbData.reading}</p>}
-             <h2 className="text-4xl md:text-5xl font-bold text-stone-700 tracking-tight lowercase">{verbData.verb}</h2>
+            {verbData.reading && verbData.reading !== 'null' && <p className="text-lg text-rose-400 font-medium font-japanese">{verbData.reading}</p>}
+            <h2 className="text-4xl md:text-5xl font-bold text-stone-700 tracking-tight lowercase">{verbData.verb}</h2>
           </div>
           <p className="text-xl md:text-2xl text-stone-400 font-light mt-2 relative z-10">{verbData.englishMeaning}</p>
         </section>
@@ -815,13 +1088,19 @@ function AppContent() {
 
         {showSentences && (
           <section id="sentence-section" className="space-y-6 pt-8 border-t border-dashed border-rose-200 animate-in fade-in slide-in-from-bottom-8 duration-700 scroll-mt-24">
-             {phase === AppPhase.LOADING_SENTENCES ? <div className="py-12"><LoadingSpinner message={ui.loadingSentences} /></div> : (
-               <>
+            {phase === AppPhase.LOADING_SENTENCES ? <div className="py-12"><LoadingSpinner message={ui.loadingSentences} /></div> : (
+              <>
                 <div className="flex items-center justify-between px-2">
                   <h3 className="text-lg font-bold text-stone-600 flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-500 text-xs font-bold">2</span>{ui.section2Header}</h3>
-                   {phase === AppPhase.SENTENCE_REVIEW && (sentenceErrors === 0 ? <span className="text-emerald-600 flex items-center gap-1 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100"><CheckCircle size={14} /> {ui.complete}</span> : <span className="text-rose-500 flex items-center gap-1 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100"><XCircle size={14} /> {sentenceErrors} {ui.mistakes}</span>)}
+                  {phase === AppPhase.SENTENCE_REVIEW && (sentenceErrors === 0 ? <span className="text-emerald-600 flex items-center gap-1 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100"><CheckCircle size={14} /> {ui.complete}</span> : <span className="text-rose-500 flex items-center gap-1 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100"><XCircle size={14} /> {sentenceErrors} {ui.mistakes}</span>)}
                 </div>
-                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-stone-600 text-sm flex gap-3"><div className="shrink-0 mt-0.5 text-rose-400"><BookOpen size={18}/></div><p>{ui.contextInstructions} <strong className="text-rose-500">{verbData.verb}</strong>. {ui.tapWord}</p></div>
+                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-stone-600 text-sm flex gap-3 items-start">
+                  <div className="shrink-0 mt-0.5 text-rose-400"><BookOpen size={18} /></div>
+                  <div className="space-y-1">
+                    <p className="font-medium leading-relaxed">{ui.contextInstructions} <strong className="text-rose-500 bg-rose-50 px-1 rounded">{verbData.verb}</strong></p>
+                    <p className="text-stone-400 text-xs">{ui.tapWord}</p>
+                  </div>
+                </div>
                 <SentenceQuiz sentences={sentences} userInput={sentenceInput} onInputChange={handleSentenceChange} isReviewMode={phase === AppPhase.SENTENCE_REVIEW} uiLabels={ui} />
                 <div className="flex justify-end pt-4 pb-8">
                   {phase === AppPhase.SENTENCE_INPUT ? (
@@ -830,8 +1109,8 @@ function AppContent() {
                     <button onClick={() => setShowSummaryModal(true)} className="w-full md:w-auto justify-center bg-white text-stone-600 px-8 py-3 rounded-2xl font-bold text-lg border border-stone-200 hover:bg-stone-50 hover:border-rose-200 hover:text-rose-500 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.nextVerb} <RefreshCw size={20} className="opacity-60" /></button>
                   )}
                 </div>
-               </>
-             )}
+              </>
+            )}
           </section>
         )}
       </main>
@@ -841,23 +1120,23 @@ function AppContent() {
   const BottomNav = () => (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-rose-200/50 pb-safe z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
       <div className="flex justify-around items-center max-w-md mx-auto">
-        <button 
+        <button
           onClick={() => setActiveTab('tutorial')}
           className={`flex flex-col items-center gap-1 p-3 transition-colors ${activeTab === 'tutorial' ? 'text-rose-500' : 'text-stone-400 hover:text-stone-600'}`}
         >
           <BookText size={24} strokeWidth={activeTab === 'tutorial' ? 2.5 : 2} />
           <span className="text-[10px] font-bold">{ui.tabTutorial}</span>
         </button>
-        
-        <button 
+
+        <button
           onClick={() => setActiveTab('home')}
           className={`flex flex-col items-center gap-1 p-3 transition-colors ${activeTab === 'home' ? 'text-rose-500' : 'text-stone-400 hover:text-stone-600'}`}
         >
           <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
           <span className="text-[10px] font-bold">{ui.tabHome}</span>
         </button>
-        
-        <button 
+
+        <button
           onClick={() => setActiveTab('quiz')}
           className={`flex flex-col items-center gap-1 p-3 transition-colors ${activeTab === 'quiz' ? 'text-rose-500' : 'text-stone-400 hover:text-stone-600'}`}
         >
@@ -879,13 +1158,14 @@ function AppContent() {
         return renderTutorialPlaceholder();
       case 'settings':
         return (
-          <Settings 
+          <Settings
             currentLanguage={language}
             onLanguageChange={changeLearningLanguage}
             instructionLang={instructionLang}
-            onInstructionLangChange={setInstructionLang}
+            onInstructionLangChange={handleInstructionLangChange}
             instructionLanguages={INSTRUCTION_LANGUAGES}
             uiLabels={ui}
+            isJP={language === 'jp'}
           />
         );
       default:
@@ -899,21 +1179,30 @@ function AppContent() {
     <div className="min-h-screen flex flex-col bg-stone-50 font-sans selection:bg-rose-100 selection:text-rose-900">
       {renderCountdown()}
       {renderSummaryModal()}
-      
+
       {/* Header is always visible unless on Login/Landing */}
       {(phase !== AppPhase.LOGIN && phase !== AppPhase.LANGUAGE_SELECTION) && renderHeader()}
-      
+
       {/* Main Content Area */}
-      {phase === AppPhase.LOGIN ? renderLoginPage() : (
-        phase === AppPhase.LANGUAGE_SELECTION ? renderLanguageSelection() : (
-          <>
-            {renderContent()}
-            {/* Show Bottom Nav only if not on Settings page? Or always? Design usually keeps it unless modal. 
-                Settings is treated as a tab here, so keep nav for easy exit. */}
-            <BottomNav />
-          </>
-        )
-      )}
+      {/* Main Content Area */}
+      {(() => {
+        switch (phase) {
+          case AppPhase.LOGIN:
+            return renderLoginPage();
+          case AppPhase.EXPLANATION_LANGUAGE_SELECTION:
+            return renderExplanationLanguageSelection();
+          case AppPhase.LANGUAGE_SELECTION:
+            return renderLanguageSelection();
+          default:
+            return (
+              <>
+                {renderContent()}
+                <BottomNav />
+                {showOnboarding && renderTutorial()}
+              </>
+            );
+        }
+      })()}
     </div>
   );
 }

@@ -5,6 +5,7 @@ export enum AppPhase {
   LOGIN = 'LOGIN',
   LANDING = 'LANDING', // Deprecated in favor of DASHBOARD/LANGUAGE_SELECTION, kept for safe transition
   DASHBOARD = 'DASHBOARD',
+  EXPLANATION_LANGUAGE_SELECTION = 'EXPLANATION_LANGUAGE_SELECTION',
   LANGUAGE_SELECTION = 'LANGUAGE_SELECTION',
   LOADING_VERB = 'LOADING_VERB',
   CONJUGATION_INPUT = 'CONJUGATION_INPUT',
@@ -93,7 +94,7 @@ export const LANGUAGE_CONFIGS: Record<Language, LanguageConfig> = {
     flag: '🇯🇵',
     rowHeaderLabel: 'Style',
     // These act as the "columns" in the data structure
-    pronouns: ['Plain', 'Polite'], 
+    pronouns: ['Plain', 'Polite'],
     // The 6 vertical forms requested
     tenses: ['present', 'negative', 'past', 'past_neg', 'te_form', 'volitional'],
     tenseLabels: {
