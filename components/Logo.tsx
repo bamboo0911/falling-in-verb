@@ -9,8 +9,8 @@ export const Logo: React.FC<{ className?: string }> = ({ className }) => (
   >
     <defs>
       <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#fecdd3" /> {/* rose-200 */}
-        <stop offset="100%" stopColor="#f43f5e" /> {/* rose-500 */}
+        <stop offset="0%" stopColor="#E67E80" /> {/* rose-dust */}
+        <stop offset="100%" stopColor="#E67E80" /> {/* rose-dust */}
       </linearGradient>
     </defs>
     <rect width="512" height="512" rx="128" fill="url(#logoGradient)" />

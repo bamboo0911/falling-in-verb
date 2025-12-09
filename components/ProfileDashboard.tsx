@@ -112,9 +112,29 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
   const PADDING_LEFT = 35;
   const PADDING_RIGHT = 10;
 
+  // Interaction State
+  const [isChartActive, setIsChartActive] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPos = useRef<{ x: number, y: number } | null>(null);
+
   const handleChartMove = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
     if (!stats || stats.length < 2) return;
 
+    // For mouse, always allow scrubbing
+    if (!('touches' in e)) {
+      updateHoverIndex(e);
+      return;
+    }
+
+    // For touch, only allow if chart is active (long press triggered)
+    if (isChartActive) {
+      // Prevent default to stop scrolling while scrubbing
+      if (e.cancelable) e.preventDefault();
+      updateHoverIndex(e);
+    }
+  };
+
+  const updateHoverIndex = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
     const svgRect = e.currentTarget.getBoundingClientRect();
     let clientX;
 
@@ -134,11 +154,75 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
 
   const handleChartLeave = () => {
     setHoveredIndex(null);
+    // Do not reset isChartActive here for touch, handled in onTouchEnd
+    if (!('ontouchstart' in window)) { // Only for mouse
+      // actually, for mouse we just clear hover. 
+    }
   };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.targetTouches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+
+    // Start long press timer
+    longPressTimer.current = setTimeout(() => {
+      setIsChartActive(true);
+      // Trigger initial hover at current position
+      updateHoverIndex(e as any);
+      // Optional: Haptic feedback could go here
+    }, 300); // 300ms long press
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+
+    if (isChartActive) {
+      // If active, just scrub
+      handleChartMove(e as any);
+    } else {
+      // If not active yet, check if moved too much (cancel long press)
+      const touch = e.targetTouches[0];
+      const diffX = Math.abs(touch.clientX - touchStartPos.current.x);
+      const diffY = Math.abs(touch.clientY - touchStartPos.current.y);
+
+      if (diffX > 10 || diffY > 10) {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
+    if (isChartActive) {
+      setIsChartActive(false);
+      setHoveredIndex(null);
+    } else {
+      // It was a tap or swipe, handle carousel logic
+      if (touchStartPos.current) {
+        const touchEnd = e.changedTouches[0].clientX;
+        const diff = touchStartPos.current.x - touchEnd;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) handleNext();
+          else handlePrev();
+        }
+      }
+    }
+    touchStartPos.current = null;
+  };
+
 
   const getPointCoordinates = (index: number, value: number, maxVal: number) => {
     const x = PADDING_LEFT + (index / (stats.length - 1)) * (CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
-    const y = CHART_HEIGHT - PADDING_BOTTOM - ((value) / (maxVal)) * (CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM);
+    // Ensure we don't divide by zero if maxVal is 0
+    const safeMax = maxVal || 1;
+    const y = CHART_HEIGHT - PADDING_BOTTOM - ((value) / (safeMax)) * (CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM);
     return { x, y };
   };
 
@@ -148,7 +232,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     const boxY = y - 35;
 
     return (
-      <g className="animate-in fade-in zoom-in-95 duration-200">
+      <g className="animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
         <line x1={x} y1={PADDING_TOP} x2={x} y2={CHART_HEIGHT - PADDING_BOTTOM} stroke="#d6d3d1" strokeWidth="1" strokeDasharray="4" />
         <circle cx={x} cy={y} r="4" fill="white" stroke="#f43f5e" strokeWidth="2" />
         <rect
@@ -162,23 +246,55 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
           strokeWidth="1"
           className="drop-shadow-md"
         />
-        <text x={isRightSide ? boxX - 35 : boxX + 35} y={boxY + 14} textAnchor="middle" className="text-[10px] font-bold fill-stone-700 pointer-events-none">
+        <text x={isRightSide ? boxX - 35 : boxX + 35} y={boxY + 14} textAnchor="middle" className="text-[10px] font-bold fill-stone-700">
           {label}
         </text>
-        <text x={isRightSide ? boxX - 35 : boxX + 35} y={boxY + 26} textAnchor="middle" className="text-[9px] font-medium fill-stone-400 pointer-events-none">
+        <text x={isRightSide ? boxX - 35 : boxX + 35} y={boxY + 26} textAnchor="middle" className="text-[9px] font-medium fill-stone-400">
           {subLabel}
         </text>
       </g>
     );
   };
 
-  const createLinePath = (data: DailyStat[], valueKey: 'avgAccuracy' | 'avgDuration', maxVal: number) => {
+  // Smooth Line Generator (Catmull-Rom spline converted to Bezier)
+  const createSmoothLinePath = (data: DailyStat[], valueKey: 'avgAccuracy' | 'avgDuration', maxVal: number) => {
     if (!data || data.length < 2) return "";
-    const points = data.map((d, i) => {
-      const { x, y } = getPointCoordinates(i, d[valueKey], maxVal);
-      return `${x},${y}`;
-    });
-    return `M ${points.join(' L ')}`;
+
+    const points = data.map((d, i) => getPointCoordinates(i, d[valueKey], maxVal));
+
+    if (points.length === 2) {
+      return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`;
+    }
+
+    let path = `M ${points[0].x},${points[0].y}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? 0 : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+
+    return path;
+  };
+
+  const createGradientArea = (data: DailyStat[], valueKey: 'avgAccuracy' | 'avgDuration', maxVal: number) => {
+    const linePath = createSmoothLinePath(data, valueKey, maxVal);
+    if (!linePath) return "";
+
+    const firstPoint = getPointCoordinates(0, data[0][valueKey], maxVal);
+    const lastPoint = getPointCoordinates(data.length - 1, data[data.length - 1][valueKey], maxVal);
+    const bottomY = CHART_HEIGHT - PADDING_BOTTOM;
+
+    return `${linePath} L ${lastPoint.x},${bottomY} L ${firstPoint.x},${bottomY} Z`;
   };
 
   const createBarPaths = (data: DailyStat[], maxCount: number) => {
@@ -197,7 +313,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
           width={barWidth}
           height={h}
           rx={2}
-          className={`transition-colors ${isHovered ? 'fill-rose-400' : 'fill-rose-300'}`}
+          className={`transition-colors ${isHovered ? 'fill-lake' : 'fill-lake/50'}`}
         />
       );
     });
@@ -252,11 +368,11 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
           const normalizedSize = 0.8 + ((v.count - minCount) / sizeRange) * 1.2;
           let colorClass = "text-stone-400";
 
-          if (v.avgAccuracy < 0.2) colorClass = "text-rose-700";
-          else if (v.avgAccuracy < 0.4) colorClass = "text-rose-200";
-          else if (v.avgAccuracy < 0.6) colorClass = "text-amber-400";
-          else if (v.avgAccuracy < 0.8) colorClass = "text-emerald-200";
-          else colorClass = "text-emerald-700";
+          if (v.avgAccuracy < 0.2) colorClass = "text-rose-dust";
+          else if (v.avgAccuracy < 0.4) colorClass = "text-rose-dust/70";
+          else if (v.avgAccuracy < 0.6) colorClass = "text-lake/70";
+          else if (v.avgAccuracy < 0.8) colorClass = "text-lake";
+          else colorClass = "text-charcoal";
 
           return (
             <span
@@ -278,7 +394,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     {
       id: 'accuracy',
       title: uiLabels.accuracyTrend,
-      icon: <TrendingUp size={18} className="text-rose-400" />,
+      icon: <TrendingUp size={18} className="text-lake" />,
       render: () => {
         const maxY = 1.05;
         return (
@@ -288,9 +404,16 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
             className="w-full h-full overflow-visible touch-none cursor-crosshair"
             onMouseMove={handleChartMove}
             onMouseLeave={handleChartLeave}
-            onTouchStart={handleChartMove}
-            onTouchMove={handleChartMove}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
+            <defs>
+              <linearGradient id="accuracyGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#5F9EA0" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#5F9EA0" stopOpacity="0" />
+              </linearGradient>
+            </defs>
             <line x1={PADDING_LEFT} y1={PADDING_TOP} x2={CHART_WIDTH - PADDING_RIGHT} y2={PADDING_TOP} stroke="#e5e7eb" strokeDasharray="4" />
             <line x1={PADDING_LEFT} y1={CHART_HEIGHT / 2} x2={CHART_WIDTH - PADDING_RIGHT} y2={CHART_HEIGHT / 2} stroke="#e5e7eb" strokeDasharray="4" />
             <line x1={PADDING_LEFT} y1={CHART_HEIGHT - PADDING_BOTTOM} x2={CHART_WIDTH - PADDING_RIGHT} y2={CHART_HEIGHT - PADDING_BOTTOM} stroke="#e5e7eb" strokeDasharray="4" />
@@ -302,9 +425,14 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
             {stats && stats.length > 0 ? (
               <>
                 <path
-                  d={createLinePath(stats, 'avgAccuracy', maxY)}
+                  d={createGradientArea(stats, 'avgAccuracy', maxY)}
+                  fill="url(#accuracyGradient)"
+                  className="pointer-events-none"
+                />
+                <path
+                  d={createSmoothLinePath(stats, 'avgAccuracy', maxY)}
                   fill="none"
-                  stroke="#f43f5e"
+                  stroke="#5F9EA0"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -329,7 +457,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     {
       id: 'volume',
       title: uiLabels.dailyVolume,
-      icon: <Activity size={18} className="text-rose-400" />,
+      icon: <Activity size={18} className="text-lake" />,
       render: () => {
         const maxCount = Math.max(...stats.map(d => d.count)) || 5;
         return (
@@ -338,8 +466,9 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
             className="w-full h-full overflow-visible touch-none cursor-crosshair"
             onMouseMove={handleChartMove}
             onMouseLeave={handleChartLeave}
-            onTouchStart={handleChartMove}
-            onTouchMove={handleChartMove}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             <line x1={PADDING_LEFT} y1={PADDING_TOP} x2={CHART_WIDTH - PADDING_RIGHT} y2={PADDING_TOP} stroke="#e5e7eb" strokeDasharray="4" />
             <line x1={PADDING_LEFT} y1={CHART_HEIGHT - PADDING_BOTTOM} x2={CHART_WIDTH - PADDING_RIGHT} y2={CHART_HEIGHT - PADDING_BOTTOM} stroke="#d6d3d1" strokeWidth="1" />
@@ -363,7 +492,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     {
       id: 'speed',
       title: uiLabels.avgTime,
-      icon: <Clock size={18} className="text-rose-400" />,
+      icon: <Clock size={18} className="text-lake" />,
       render: () => {
         const maxDur = Math.max(...stats.map(d => d.avgDuration)) || 60;
         return (
@@ -372,9 +501,16 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
             className="w-full h-full overflow-visible touch-none cursor-crosshair"
             onMouseMove={handleChartMove}
             onMouseLeave={handleChartLeave}
-            onTouchStart={handleChartMove}
-            onTouchMove={handleChartMove}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
+            <defs>
+              <linearGradient id="speedGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#a8a29e" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#a8a29e" stopOpacity="0" />
+              </linearGradient>
+            </defs>
             <line x1={PADDING_LEFT} y1={PADDING_TOP} x2={CHART_WIDTH - PADDING_RIGHT} y2={PADDING_TOP} stroke="#e5e7eb" strokeDasharray="4" />
             <line x1={PADDING_LEFT} y1={CHART_HEIGHT / 2} x2={CHART_WIDTH - PADDING_RIGHT} y2={CHART_HEIGHT / 2} stroke="#e5e7eb" strokeDasharray="4" />
             <line x1={PADDING_LEFT} y1={CHART_HEIGHT - PADDING_BOTTOM} x2={CHART_WIDTH - PADDING_RIGHT} y2={CHART_HEIGHT - PADDING_BOTTOM} stroke="#e5e7eb" strokeDasharray="4" />
@@ -385,7 +521,12 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
             {stats && stats.length > 0 ? (
               <>
                 <path
-                  d={createLinePath(stats, 'avgDuration', maxDur)}
+                  d={createGradientArea(stats, 'avgDuration', maxDur)}
+                  fill="url(#speedGradient)"
+                  className="pointer-events-none"
+                />
+                <path
+                  d={createSmoothLinePath(stats, 'avgDuration', maxDur)}
                   fill="none"
                   stroke="#a8a29e"
                   strokeWidth="2"
@@ -409,7 +550,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     {
       id: 'cloud',
       title: uiLabels.vocabMastery,
-      icon: <Cloud size={18} className="text-rose-400" />,
+      icon: <Cloud size={18} className="text-lake" />,
       render: () => renderWordCloud()
     }
   ];
@@ -423,20 +564,6 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     setCurrentChartIndex((prev) => (prev - 1 + charts.length) % charts.length);
   }
 
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.targetTouches[0].clientX);
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart) return;
-    const touchEnd = e.changedTouches[0].clientX;
-    const diff = touchStart - touchEnd;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) handleNext();
-      else handlePrev();
-    }
-    setTouchStart(null);
-  };
-
   // --- RENDER LOGIC BASED ON VARIANT ---
 
   const containerClasses = isModal
@@ -444,8 +571,8 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
     : "flex-1 flex flex-col items-center w-full max-w-4xl mx-auto p-0 pb-safe pb-24 animate-in fade-in duration-500";
 
   const cardClasses = isModal
-    ? "bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-rose-100 flex flex-col overflow-hidden max-h-[95vh]"
-    : "bg-white/80 backdrop-blur-md rounded-3xl w-full shadow-sm border border-rose-100 flex flex-col overflow-hidden h-full";
+    ? "bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-mist-dark flex flex-col overflow-hidden max-h-[95vh]"
+    : "bg-white/80 backdrop-blur-md rounded-3xl w-full shadow-sm border border-mist-dark flex flex-col overflow-hidden h-full";
 
   return (
     <div className={containerClasses}>
@@ -465,7 +592,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                 <div className="relative">
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-1.5 bg-white border border-stone-200 text-stone-700 py-1 pl-3 pr-2 rounded-lg font-bold text-xs hover:border-rose-200 transition-all shadow-sm"
+                    className="flex items-center gap-1.5 bg-white border border-mist-dark text-charcoal py-1 pl-3 pr-2 rounded-lg font-bold text-xs hover:border-lake transition-all shadow-sm"
                   >
                     <span>{selectedLanguage ? LANGUAGE_CONFIGS[selectedLanguage].flag : ''}</span>
                     <span>{selectedLanguage ? LANGUAGE_CONFIGS[selectedLanguage].name : uiLabels.select}</span>
@@ -487,7 +614,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                               setIsDropdownOpen(false);
                             }}
                             className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors ${selectedLanguage === langId
-                              ? 'bg-rose-50 text-rose-500'
+                              ? 'bg-mist text-lake'
                               : 'text-stone-600 hover:bg-stone-50'
                               }`}
                           >
@@ -507,7 +634,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
               )}
 
               {isModal && onClose && (
-                <button onClick={onClose} className="p-1.5 hover:bg-rose-50 rounded-full text-stone-400 hover:text-rose-500 transition-colors">
+                <button onClick={onClose} className="p-1.5 hover:bg-mist rounded-full text-stone-grey hover:text-charcoal transition-colors">
                   <X size={20} />
                 </button>
               )}
@@ -521,7 +648,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
             <div className="flex-1 flex items-center justify-center min-h-[200px]"><LoadingSpinner message={uiLabels.loadingStats} /></div>
           ) : !selectedLanguage ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] space-y-3 text-center">
-              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-rose-200">
+              <div className="w-16 h-16 bg-mist rounded-full flex items-center justify-center text-stone-300">
                 <Activity size={32} />
               </div>
               <div>
@@ -538,7 +665,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                     key={d}
                     onClick={() => setTimeRange(d as any)}
                     className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${timeRange === d
-                      ? 'bg-white text-rose-500 shadow-sm'
+                      ? 'bg-white text-lake shadow-sm'
                       : 'text-stone-400 hover:text-stone-600'
                       }`}
                   >
@@ -549,9 +676,9 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
 
               {/* Big Stat Cards */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-rose-50 rounded-xl p-2 border border-rose-100 flex flex-col items-center justify-center text-center">
+                <div className="bg-mist rounded-xl p-2 border border-mist-dark flex flex-col items-center justify-center text-center">
                   <span className="text-stone-500 text-[9px] font-bold uppercase tracking-wider mb-0.5">{uiLabels.total} {LANGUAGE_CONFIGS[selectedLanguage].name.split(' ')[0]}</span>
-                  <span className="text-2xl font-black text-rose-500">{totalVerbs}</span>
+                  <span className="text-2xl font-black text-lake">{totalVerbs}</span>
                 </div>
                 <div className="bg-stone-50 rounded-xl p-2 border border-stone-100 flex flex-col items-center justify-center text-center">
                   <span className="text-stone-500 text-[9px] font-bold uppercase tracking-wider mb-0.5">{uiLabels.recentAccuracy}</span>
@@ -577,13 +704,13 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                 >
                   <button
                     onClick={handlePrev}
-                    className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-stone-400 hover:text-rose-500 hover:shadow-md transition-all active:scale-90 flex"
+                    className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-stone-400 hover:text-lake hover:shadow-md transition-all active:scale-90 flex"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={handleNext}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-stone-400 hover:text-rose-500 hover:shadow-md transition-all active:scale-90 flex"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-stone-400 hover:text-lake hover:shadow-md transition-all active:scale-90 flex"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -598,7 +725,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                     <button
                       key={idx}
                       onClick={() => setCurrentChartIndex(idx)}
-                      className={`h-1 rounded-full transition-all duration-300 ${currentChartIndex === idx ? 'w-4 bg-rose-400' : 'w-1 bg-stone-200 hover:bg-stone-300'
+                      className={`h-1 rounded-full transition-all duration-300 ${currentChartIndex === idx ? 'w-4 bg-lake' : 'w-1 bg-stone-200 hover:bg-stone-300'
                         }`}
                     />
                   ))}
@@ -608,7 +735,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
               {/* Recent Activity List */}
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5 text-stone-600 font-bold text-xs px-1 mt-2 border-t border-stone-100 pt-2">
-                  <History size={14} className="text-rose-400" /> {uiLabels.recentActivity}
+                  <History size={14} className="text-lake" /> {uiLabels.recentActivity}
                 </div>
 
                 <div className="bg-stone-50 rounded-xl border border-stone-100 p-2 max-h-[150px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
@@ -617,7 +744,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                       <p className="text-center text-[10px] text-stone-300 italic py-2">{uiLabels.noRecentActivity}</p>
                     ) : (
                       recentLogs.map((log, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-white border border-stone-100 rounded-lg shadow-sm hover:border-rose-100 transition-colors">
+                        <div key={i} className="flex items-center justify-between p-2 bg-white border border-mist-dark rounded-lg shadow-sm hover:border-lake transition-colors">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">{LANGUAGE_CONFIGS[log.language].flag}</span>
                             <div>
@@ -632,7 +759,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
                                 <CheckCircle size={10} /> {uiLabels.perfect}
                               </span>
                             ) : (
-                              <span className="flex items-center gap-0.5 bg-rose-50 text-rose-500 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
+                              <span className="flex items-center gap-0.5 bg-mist text-rose-dust px-1.5 py-0.5 rounded-md text-[10px] font-bold">
                                 <XCircle size={10} /> {((1 - log.accuracy) * log.totalQuestions).toFixed(0)} {uiLabels.err}
                               </span>
                             )}
@@ -658,7 +785,7 @@ export const ProfileDashboard: React.FC<Props> = ({ onClose, variant = 'modal', 
         <div className="w-full max-w-lg mt-4 px-4 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
           <button
             onClick={handleStartPractice}
-            className="w-full bg-rose-500 text-white py-3 rounded-2xl font-bold text-lg shadow-xl shadow-rose-200 hover:bg-rose-600 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-rose-dust text-white py-3 rounded-2xl font-bold text-lg shadow-xl shadow-rose-dust/20 hover:bg-rose-dust/90 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             <Play size={24} fill="currentColor" /> {uiLabels.startPractice}
           </button>

@@ -26,14 +26,14 @@ export const Settings: React.FC<Props> = ({
   return (
     <div className="w-full max-w-2xl mx-auto p-4 md:p-6 space-y-8 animate-in fade-in duration-500 pb-24">
       <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-stone-700">{uiLabels.settingsTitle}</h2>
-        <p className="text-stone-400 text-sm">{uiLabels.settingsSubtitle}</p>
+        <h2 className="text-2xl font-bold text-charcoal">{uiLabels.settingsTitle}</h2>
+        <p className="text-stone-grey text-sm">{uiLabels.settingsSubtitle}</p>
       </div>
 
       {/* Account Section */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-6">
+      <section className="bg-white rounded-3xl p-6 shadow-sm border border-mist-dark space-y-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center text-rose-400 text-2xl font-bold border-2 border-white shadow-md">
+          <div className="w-16 h-16 rounded-full bg-mist flex items-center justify-center text-stone-400 text-2xl font-bold border-2 border-white shadow-md">
             {user?.photoURL ? (
               <img src={user.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
             ) : (
@@ -41,14 +41,14 @@ export const Settings: React.FC<Props> = ({
             )}
           </div>
           <div>
-            <h3 className="font-bold text-stone-700 text-lg">{user?.displayName || 'Guest User'}</h3>
-            <p className="text-stone-400 text-sm">{user?.email || 'Not logged in'}</p>
+            <h3 className="font-bold text-charcoal text-lg">{user?.displayName || 'Guest User'}</h3>
+            <p className="text-stone-grey text-sm">{user?.email || 'Not logged in'}</p>
           </div>
         </div>
 
         <button
           onClick={logout}
-          className="w-full py-3 px-4 rounded-xl border border-rose-100 text-rose-500 font-bold hover:bg-rose-50 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 px-4 rounded-xl border border-rose-dust/20 text-rose-dust font-bold hover:bg-rose-dust/10 transition-colors flex items-center justify-center gap-2"
         >
           <LogOut size={18} /> {uiLabels.signOut}
         </button>
@@ -56,8 +56,8 @@ export const Settings: React.FC<Props> = ({
 
       {/* Learning Language */}
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
-        <div className="flex items-center gap-2 text-stone-600 font-bold border-b border-stone-50 pb-2">
-          <Globe size={18} className="text-rose-400" />
+        <div className="flex items-center gap-2 text-stone-grey font-bold border-b border-mist-dark pb-2">
+          <Globe size={18} className="text-rose-dust" />
           <h3>{uiLabels.targetLanguage}</h3>
         </div>
 
@@ -71,16 +71,16 @@ export const Settings: React.FC<Props> = ({
                 className={`
                   relative flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left
                   ${isActive
-                    ? 'border-rose-400 bg-rose-50/30'
-                    : 'border-stone-100 hover:border-rose-200 hover:bg-stone-50'}
+                    ? 'border-rose-dust bg-rose-dust/10'
+                    : 'border-mist-dark hover:border-rose-dust/50 hover:bg-mist'}
                 `}
               >
                 <span className="text-2xl">{config.flag}</span>
-                <span className={`font-bold ${isActive ? 'text-rose-600' : 'text-stone-600'}`}>
+                <span className={`font-bold ${isActive ? 'text-rose-dust' : 'text-charcoal'}`}>
                   {config.name}
                 </span>
                 {isActive && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-rose-400 text-white rounded-full p-1">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-rose-dust text-white rounded-full p-1">
                     <Check size={12} strokeWidth={3} />
                   </div>
                 )}
@@ -92,8 +92,8 @@ export const Settings: React.FC<Props> = ({
 
       {/* Instruction Language */}
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
-        <div className="flex items-center gap-2 text-stone-600 font-bold border-b border-stone-50 pb-2">
-          <MessageCircle size={18} className="text-rose-400" />
+        <div className="flex items-center gap-2 text-stone-grey font-bold border-b border-mist-dark pb-2">
+          <MessageCircle size={18} className="text-rose-dust" />
           <h3>{uiLabels.explanationLanguage}</h3>
         </div>
 
@@ -105,8 +105,8 @@ export const Settings: React.FC<Props> = ({
               className={`
                 py-2 px-3 rounded-xl text-sm font-medium transition-all border
                 ${instructionLang === lang.id
-                  ? 'bg-stone-800 text-white border-stone-800'
-                  : 'bg-white text-stone-500 border-stone-100 hover:border-stone-300'}
+                  ? 'bg-charcoal text-white border-charcoal'
+                  : 'bg-white text-stone-grey border-mist-dark hover:border-charcoal'}
               `}
             >
               <span className="mr-2">{lang.flag}</span> {lang.label}

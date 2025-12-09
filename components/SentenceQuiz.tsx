@@ -33,8 +33,8 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
         const isWrong = isReviewMode && !isCorrect;
 
         return (
-          <div key={sentence.id} className="bg-white p-4 md:p-6 rounded-3xl border border-stone-100 shadow-sm transition-shadow">
-            <div className="flex flex-wrap items-center gap-x-1 gap-y-3 text-lg leading-loose text-stone-600 font-medium">
+          <div key={sentence.id} className="bg-white p-4 md:p-6 rounded-3xl border border-mist-dark shadow-sm transition-shadow">
+            <div className="flex flex-wrap items-center gap-x-1 gap-y-3 text-lg leading-loose text-charcoal font-medium">
               {sentence.tokens.map((token, idx) => {
                 if (token.isBlank) {
                   return (
@@ -50,8 +50,8 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
                         spellCheck="false"
                         className={`w-full px-2 py-1.5 border-b-2 outline-none text-center font-bold text-lg rounded-t-lg transition-all
                           ${isReviewMode && isCorrect ? "border-emerald-300 text-emerald-700 bg-emerald-50/30" : ""}
-                          ${isReviewMode && isWrong ? "border-rose-300 text-rose-700 bg-rose-50/30" : ""}
-                          ${!isReviewMode ? "border-stone-200 bg-stone-50 focus:border-rose-300 focus:bg-white text-stone-700 placeholder-stone-300" : ""}
+                          ${isReviewMode && isWrong ? "border-rose-300 text-rose-700 bg-mist" : ""}
+                          ${!isReviewMode ? "border-mist-dark bg-mist/30 focus:border-rose-dust focus:bg-white text-charcoal placeholder-stone-grey" : ""}
                         `}
                       />
                       {isWrong && (
@@ -74,14 +74,14 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
                     onClick={() => handleTokenClick(token, idx, sentence.id)}
                     className={`
                       relative cursor-pointer rounded px-1 transition-colors select-none
-                      ${showTooltip ? 'bg-stone-600 text-white' : 'hover:text-rose-400 hover:bg-rose-50'}
+                      ${showTooltip ? 'bg-charcoal text-white' : 'hover:text-lake hover:bg-mist'}
                     `}
                   >
                     {token.text}
                     {showTooltip && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-stone-600 text-white text-sm rounded-lg shadow-xl whitespace-nowrap z-20 animate-in fade-in zoom-in duration-200">
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-charcoal text-white text-sm rounded-lg shadow-xl whitespace-nowrap z-20 animate-in fade-in zoom-in duration-200">
                         {token.translation}
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-stone-600"></div>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-charcoal"></div>
                       </div>
                     )}
                   </span>
@@ -89,11 +89,11 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
               })}
             </div>
 
-            <div className="mt-4 md:mt-6 pt-3 border-t border-stone-50 flex items-start gap-2">
-              <div className="mt-0.5 text-stone-300 shrink-0">
+            <div className="mt-4 md:mt-6 pt-3 border-t border-mist-dark flex items-start gap-2">
+              <div className="mt-0.5 text-stone-grey shrink-0">
                 <InfoIcon size={16} />
               </div>
-              <p className="text-stone-400 text-sm italic leading-relaxed">{sentence.fullTranslation}</p>
+              <p className="text-stone-grey text-sm italic leading-relaxed">{sentence.fullTranslation}</p>
             </div>
 
             {isCorrect && (
@@ -102,7 +102,7 @@ export const SentenceQuiz: React.FC<Props> = ({ sentences, userInput, onInputCha
               </div>
             )}
             {isWrong && (
-              <div className="mt-2 flex items-center gap-2 text-rose-500 font-bold text-sm bg-rose-50 px-3 py-1.5 rounded-xl inline-flex animate-in slide-in-from-left-2 border border-rose-100">
+              <div className="mt-2 flex items-center gap-2 text-rose-500 font-bold text-sm bg-mist px-3 py-1.5 rounded-xl inline-flex animate-in slide-in-from-left-2 border border-mist-dark">
                 <XIcon size={16} /> {uiLabels.incorrect}
               </div>
             )}

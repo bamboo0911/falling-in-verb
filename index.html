@@ -23,6 +23,32 @@
 
   <title>Falling In Verb</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            mist: {
+              DEFAULT: '#F2F0EB',
+              dark: '#E8E6E1',
+            },
+            rose: {
+              dust: '#E67E80',
+            },
+            lake: {
+              DEFAULT: '#5F9EA0',
+            },
+            charcoal: {
+              DEFAULT: '#2D2D2D',
+            },
+            stone: {
+              grey: '#666666',
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
     /* Custom scrollbar for tables */
     .scrollbar-hide::-webkit-scrollbar {
@@ -77,60 +103,60 @@
 </script>
   <!-- Dynamic Icon Generator for iOS -->
   <script>
-    (function () {
-      // Wait for the document to be ready
-      window.addEventListener('load', function () {
-        try {
-          // Create a canvas element
-          const canvas = document.createElement('canvas');
-          canvas.width = 512;
-          canvas.height = 512;
-          const ctx = canvas.getContext('2d');
+      (function () {
+        // Wait for the document to be ready
+        window.addEventListener('load', function () {
+          try {
+            // Create a canvas element
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
 
-          if (ctx) {
-            // 1. Draw Background Gradient (Rose Pink)
-            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-            gradient.addColorStop(0, '#fecdd3'); // rose-200
-            gradient.addColorStop(1, '#f43f5e'); // rose-500
-            ctx.fillStyle = gradient;
-            // Note: iOS rounds icons automatically, so we draw a full square to avoid black corners
-            ctx.fillRect(0, 0, 512, 512);
+            if (ctx) {
+              // 1. Draw Background Gradient (Rose Pink)
+              const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+              gradient.addColorStop(0, '#fecdd3'); // rose-200
+              gradient.addColorStop(1, '#f43f5e'); // rose-500
+              ctx.fillStyle = gradient;
+              // Note: iOS rounds icons automatically, so we draw a full square to avoid black corners
+              ctx.fillRect(0, 0, 512, 512);
 
-            // 2. Draw the White Heart
-            ctx.fillStyle = '#ffffff';
-            // This is the same path data from logo.svg
-            const heartPath = new Path2D("M256 420.4l-26.6-24.2C134.9 309.4 72 252.4 72 182.2 72 125.2 116.8 80 174.2 80c32.3 0 63.4 15.1 81.8 38.8C274.4 95.1 305.5 80 337.8 80 395.2 80 440 125.2 440 182.2c0 70.2-62.9 127.2-157.4 214L256 420.4z");
+              // 2. Draw the White Heart
+              ctx.fillStyle = '#ffffff';
+              // This is the same path data from logo.svg
+              const heartPath = new Path2D("M256 420.4l-26.6-24.2C134.9 309.4 72 252.4 72 182.2 72 125.2 116.8 80 174.2 80c32.3 0 63.4 15.1 81.8 38.8C274.4 95.1 305.5 80 337.8 80 395.2 80 440 125.2 440 182.2c0 70.2-62.9 127.2-157.4 214L256 420.4z");
 
-            // Center transformation just in case, though path is already centered for 512
-            ctx.fill(heartPath);
+              // Center transformation just in case, though path is already centered for 512
+              ctx.fill(heartPath);
 
-            // 3. Convert to PNG Data URL
-            const pngUrl = canvas.toDataURL('image/png');
+              // 3. Convert to PNG Data URL
+              const pngUrl = canvas.toDataURL('image/png');
 
-            // 4. Update the Apple Touch Icon link
-            const appleIconLink = document.getElementById('apple-icon');
-            if (appleIconLink) {
-              appleIconLink.href = pngUrl;
-              console.log('Generated PNG icon for iOS');
+              // 4. Update the Apple Touch Icon link
+              const appleIconLink = document.getElementById('apple-icon');
+              if (appleIconLink) {
+                appleIconLink.href = pngUrl;
+                console.log('Generated PNG icon for iOS');
+              }
+
+              // Optional: Update favicon too just to be safe
+              const favIconLink = document.getElementById('fav-icon');
+              if (favIconLink) {
+                favIconLink.href = pngUrl;
+                favIconLink.type = "image/png";
+              }
             }
-
-            // Optional: Update favicon too just to be safe
-            const favIconLink = document.getElementById('fav-icon');
-            if (favIconLink) {
-              favIconLink.href = pngUrl;
-              favIconLink.type = "image/png";
-            }
+          } catch (e) {
+            console.error('Failed to generate dynamic icon:', e);
           }
-        } catch (e) {
-          console.error('Failed to generate dynamic icon:', e);
-        }
-      });
-    })();
+        });
+      })();
   </script>
   <link rel="stylesheet" href="/index.css">
 </head>
 
-<body class="bg-stone-50 text-stone-600 antialiased overscroll-none">
+<body class="bg-mist text-charcoal antialiased overscroll-none">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
   <script>

@@ -19,6 +19,7 @@ import { dbService } from './services/dbService';
 import { ProfileDashboard } from './components/ProfileDashboard';
 import { Settings } from './components/Settings';
 import { Tutorial } from './components/Tutorial';
+import { ConjugationGuide } from './components/ConjugationGuide';
 
 const INSTRUCTION_LANGUAGES = [
   { id: 'English', label: 'English', flag: '🇺🇸' },
@@ -470,7 +471,7 @@ const GoogleIcon = () => (
 type Tab = 'tutorial' | 'home' | 'quiz' | 'settings';
 
 function AppContent() {
-  const { user, signInWithGoogle, loading: authLoading } = useAuth();
+  const { user, signInWithGoogle, logout, loading: authLoading, error: contextAuthError } = useAuth();
 
   // App State
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -511,8 +512,24 @@ function AppContent() {
   // Onboarding State
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // Login Timeout State
+  const [syncTimeout, setSyncTimeout] = useState(false);
+
   // Helper to get current UI labels
   const ui = UI_TEXT[instructionLang] || UI_TEXT['English'];
+
+  // Timeout for profile sync
+  useEffect(() => {
+    let timeout: any;
+    if (user && phase === AppPhase.LOGIN) {
+      timeout = setTimeout(() => {
+        setSyncTimeout(true);
+      }, 8000); // 8 seconds
+    } else {
+      setSyncTimeout(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [user, phase]);
 
   // Auth & Routing Logic
   useEffect(() => {
@@ -816,11 +833,28 @@ function AppContent() {
     const currentFlag = language ? LANGUAGE_CONFIGS[language].flag : '✨';
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-        <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl border border-rose-100 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
+        <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl border border-mist-dark flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
           {/* ... Summary Content ... */}
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-2 border border-rose-100 shadow-sm">
-              <span className="text-3xl filter drop-shadow-sm grayscale-0">{currentFlag}</span>
+            {/* Header / Verb Display */}
+            <div className="text-center mb-8 relative">
+              <div className="inline-block px-4 py-1.5 rounded-full bg-white border border-mist-dark text-lake text-xs font-bold tracking-widest uppercase mb-4 shadow-sm">
+                {ui.verbOfMoment}
+              </div>
+              <h2 className="text-5xl sm:text-6xl font-serif italic font-bold text-charcoal mb-2 tracking-tight">
+                {verbData?.verb}
+              </h2>
+              <p className="text-xl text-lake font-medium">
+                {verbData?.translation}
+              </p>
+
+              {/* Timer */}
+              {startTime && !finalTime && (
+                <div className="absolute top-0 right-0 hidden sm:flex items-center gap-2 text-stone-400 font-mono text-sm bg-mist px-3 py-1 rounded-full">
+                  <Timer size={14} />
+                  <span>{formatElapsedTime(startTime)}</span>
+                </div>
+              )}
             </div>
             <p className="text-stone-400 font-bold uppercase tracking-wider text-xs">{ui.sessionComplete}</p>
             <h2 className="text-3xl font-bold text-stone-700">{verbData.verb}</h2>
@@ -832,7 +866,7 @@ function AppContent() {
               <div className="flex items-center gap-2 text-stone-500 font-bold text-sm">
                 <Timer size={18} /> {ui.time}
               </div>
-              <span className="text-xl font-bold text-stone-700">{finalTime || "0:00"}</span>
+              <span className="text-2xl font-bold text-charcoal">{finalTime || "0:00"}</span>
             </div>
             {/* Stats badges */}
             <div className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-1 border ${conjugationErrors === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
@@ -847,10 +881,11 @@ function AppContent() {
 
           <div className="w-full space-y-2">
             <button
-              onClick={handleNextCycle}
-              className="w-full bg-rose-500 text-white py-3 rounded-2xl font-bold text-lg shadow-lg shadow-rose-200 hover:bg-rose-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+              onClick={() => loadNewVerb(language!)}
+              className="w-full py-4 bg-rose-dust text-white rounded-2xl font-bold text-lg shadow-lg shadow-rose-dust/20 hover:bg-rose-dust/90 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              {ui.nextVerbAction} <Play size={20} fill="currentColor" />
+              <RotateCw size={20} />
+              {ui.nextVerbAction}
             </button>
             <button
               onClick={handleSummaryContinue}
@@ -866,37 +901,68 @@ function AppContent() {
 
   const renderLoginPage = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-700">
-      <div className="max-w-md w-full text-center space-y-10">
-        <div className="space-y-4">
-          <div className="w-28 h-28 mx-auto flex items-center justify-center transform hover:rotate-6 transition-transform duration-500">
-            <Logo className="w-full h-full drop-shadow-2xl" />
-          </div>
-          <div>
-            <h1 className="text-4xl font-black text-stone-700 tracking-tight mb-2">{ui.loginTitle}</h1>
-            <p className="text-lg text-rose-400 font-medium">{ui.loginMarketing}</p>
+      <div className="max-w-md w-full mx-auto px-6 text-center">
+        <div className="mb-12 relative">
+          <div className="absolute inset-0 bg-rose-dust/20 blur-3xl rounded-full"></div>
+          <div className="relative transform hover:scale-105 transition-transform duration-500">
+            <Logo />
           </div>
         </div>
-        <div className="space-y-4 pt-4">
-          <button onClick={handleSignIn} className="w-full bg-white text-stone-600 border border-stone-200 hover:border-rose-200 hover:bg-rose-50 py-4 px-6 rounded-2xl font-bold shadow-lg shadow-rose-50 hover:shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 group">
-            <GoogleIcon /> <span className="group-hover:text-rose-500 transition-colors">{ui.loginGoogle}</span>
+
+        <h1 className="text-5xl font-serif italic font-bold text-charcoal mb-4 tracking-tight">
+          Falling in Verb
+        </h1>
+        <p className="text-xl text-stone-grey mb-12 font-light">
+          {ui.loginMarketing}
+        </p>
+
+        <div className="space-y-4">
+          <button
+            onClick={handleSignIn}
+            className="w-full bg-white text-charcoal py-4 px-6 rounded-2xl font-bold text-lg shadow-lg shadow-stone-200/50 border border-mist-dark hover:bg-mist hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+          >
+            <GoogleIcon />
+            <span>{ui.loginGoogle}</span>
           </button>
-          <button onClick={handleGuestEntry} className="text-stone-400 hover:text-stone-600 font-bold text-sm hover:underline underline-offset-4 transition-colors">{ui.guest}</button>
-          {authError && <div className="bg-rose-50 border border-rose-100 text-rose-500 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2"><AlertCircle size={16} />{authError}</div>}
+
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-mist-dark"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-mist text-stone-grey">or</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGuestEntry}
+            className="w-full bg-charcoal text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-xl shadow-charcoal/20 hover:bg-charcoal/90 hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            {ui.guest}
+          </button>
         </div>
       </div>
+      {(authError || contextAuthError) && <div className="bg-rose-50 border border-rose-100 text-rose-500 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2"><AlertCircle size={16} />{authError || contextAuthError}</div>}
     </div>
   );
 
   const renderHeader = () => (
-    <header className="bg-rose-100/80 backdrop-blur-md text-rose-900 py-3 pt-[calc(env(safe-area-inset-top)_+_0.75rem)] md:py-4 px-4 sticky top-0 z-30 border-b border-rose-200/50">
-      <div className="max-w-4xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={handleHeaderLogoClick}>
-          <Logo className="w-8 h-8 rounded-lg shadow-sm" />
-          <h1 className="text-lg md:text-xl font-bold tracking-tight text-rose-900/90">Falling In Verb</h1>
+    <header className="bg-white/80 backdrop-blur-md border-b border-mist-dark sticky top-0 z-30 pt-safe">
+      <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={handleHeaderLogoClick}
+        >
+          <div className="w-8 h-8 sm:w-10 sm:h-10 transition-transform group-hover:scale-105 duration-300">
+            <Logo />
+          </div>
+          <h1 className="text-xl sm:text-2xl font-serif italic font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-dust to-rose-400">
+            Falling in Verb
+          </h1>
         </div>
         <button
           onClick={() => setActiveTab('settings')}
-          className={`p-2 rounded-full transition-colors ${activeTab === 'settings' ? 'text-rose-500 bg-rose-50' : 'text-rose-900/60 hover:bg-rose-50 hover:text-rose-500'}`}
+          className={`p-2 rounded-full transition-colors ${activeTab === 'settings' ? 'text-charcoal bg-mist' : 'text-stone-grey hover:bg-mist hover:text-charcoal'}`}
         >
           <SettingsIcon size={24} />
         </button>
@@ -996,7 +1062,7 @@ function AppContent() {
 
   const renderTutorial = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 h-[80vh]">
+      <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
         <Tutorial
           onFinish={() => {
             setShowOnboarding(false);
@@ -1016,15 +1082,18 @@ function AppContent() {
 
   const renderError = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in">
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-rose-100 text-center max-w-sm w-full space-y-4">
-        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-400">
-          {error?.includes("Network") ? <WifiOff size={32} /> : <AlertCircle size={32} />}
+      <div className="bg-white rounded-3xl shadow-xl border border-mist-dark p-8 max-w-sm w-full mx-4 text-center">
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <WifiOff size={32} className="text-rose-dust" />
         </div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-bold text-stone-700">{ui.connectionFailed}</h3>
-          <p className="text-stone-500 text-sm leading-relaxed">{error}</p>
-        </div>
-        <button onClick={retry} className="w-full bg-rose-200 text-rose-900 py-3 rounded-xl font-bold hover:bg-rose-300 transition-colors">{ui.tryAgain}</button>
+        <h2 className="text-2xl font-bold text-charcoal mb-2">{ui.connectionFailed}</h2>
+        <p className="text-stone-grey mb-8">{error}</p>
+        <button
+          onClick={() => loadNewVerb(language!)}
+          className="w-full py-3 bg-rose-dust text-white rounded-xl font-bold hover:bg-rose-dust/90 transition-colors"
+        >
+          {ui.tryAgain}
+        </button>
       </div>
     </div>
   );
@@ -1057,56 +1126,56 @@ function AppContent() {
 
     return (
       <main className={`flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 md:pb-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-safe pb-24`}>
-        <section id="conjugation-card" className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-rose-100 text-center space-y-3 relative overflow-hidden group">
+        <section id="conjugation-card" className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-mist-dark text-center space-y-3 relative overflow-hidden group">
           <div className="absolute top-4 right-4 z-20">
-            <button onClick={handleNextCycle} className="p-3 text-stone-300 hover:text-rose-500 bg-white border border-stone-100 hover:border-rose-200 hover:bg-rose-50 rounded-2xl transition-all shadow-sm active:scale-95 flex items-center gap-2" title={ui.skipVerb}><RotateCw size={20} /></button>
+            <button onClick={handleNextCycle} className="p-3 text-stone-grey hover:text-rose-dust bg-white border border-mist-dark hover:border-rose-dust/50 hover:bg-mist rounded-2xl transition-all shadow-sm active:scale-95 flex items-center gap-2" title={ui.skipVerb}><RotateCw size={20} /></button>
           </div>
           <div className="flex flex-col items-center gap-2 mb-4 relative z-10">
-            {verbData.verbGroup && <span className="inline-block px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold rounded uppercase tracking-wider">{verbData.verbGroup}</span>}
+            {verbData.verbGroup && <span className="inline-block px-2 py-0.5 bg-mist text-stone-grey text-[10px] font-bold rounded uppercase tracking-wider">{verbData.verbGroup}</span>}
           </div>
           <div className="space-y-1 relative z-10">
-            {verbData.reading && verbData.reading !== 'null' && <p className="text-lg text-rose-400 font-medium font-japanese">{verbData.reading}</p>}
-            <h2 className="text-4xl md:text-5xl font-bold text-stone-700 tracking-tight lowercase">{verbData.verb}</h2>
+            {verbData.reading && verbData.reading !== 'null' && <p className="text-lg text-lake font-medium font-japanese">{verbData.reading}</p>}
+            <h2 className="text-4xl md:text-5xl font-bold text-charcoal tracking-tight lowercase">{verbData.verb}</h2>
           </div>
-          <p className="text-xl md:text-2xl text-stone-400 font-light mt-2 relative z-10">{verbData.englishMeaning}</p>
+          <p className="text-xl md:text-2xl text-stone-grey font-light mt-2 relative z-10">{verbData.englishMeaning}</p>
         </section>
 
         <section className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-lg font-bold text-stone-600 flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-500 text-xs font-bold">1</span>{language === 'jp' ? ui.section1HeaderJP : ui.section1Header}</h3>
-            {isConjugationReview && (conjugationErrors === 0 ? <span className="text-emerald-600 flex items-center gap-1 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100"><CheckCircle size={14} /> {ui.complete}</span> : <span className="text-rose-500 flex items-center gap-1 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100"><XCircle size={14} /> {conjugationErrors} {ui.mistakes}</span>)}
+            <h3 className="text-lg font-bold text-stone-grey flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-lake/10 text-lake text-xs font-bold">1</span>{language === 'jp' ? ui.section1HeaderJP : ui.section1Header}</h3>
+            {isConjugationReview && (conjugationErrors === 0 ? <span className="text-lake flex items-center gap-1 text-xs font-bold bg-lake/10 px-3 py-1 rounded-full border border-lake/20"><CheckCircle size={14} /> {ui.complete}</span> : <span className="text-rose-dust flex items-center gap-1 text-xs font-bold bg-rose-dust/10 px-3 py-1 rounded-full border border-rose-dust/20"><XCircle size={14} /> {conjugationErrors} {ui.mistakes}</span>)}
           </div>
           <ConjugationTable verbData={verbData} userInput={conjugationInput} onInputChange={handleConjugationChange} isReviewMode={isConjugationReview} pronouns={langConfig.pronouns} tenses={langConfig.tenses} tenseLabels={langConfig.tenseLabels} rowHeaderLabel={langConfig.rowHeaderLabel} onFinish={checkConjugation} uiLabels={ui} />
           <div className={`justify-end pt-4 pb-2 ${phase === AppPhase.CONJUGATION_INPUT ? 'hidden md:flex' : 'flex'}`}>
             {phase === AppPhase.CONJUGATION_INPUT ? (
-              <button onClick={checkConjugation} className="bg-rose-200 text-rose-900 px-8 py-3 rounded-2xl font-bold text-lg border border-rose-300 hover:bg-rose-300 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.checkAnswers} <ArrowRight size={20} className="opacity-60" /></button>
+              <button onClick={checkConjugation} className="bg-rose-dust text-white px-8 py-3 rounded-2xl font-bold text-lg shadow-lg shadow-rose-dust/20 hover:bg-rose-dust/90 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2">{ui.checkAnswers} <ArrowRight size={20} className="opacity-60" /></button>
             ) : !showSentences ? (
-              <button onClick={startSentencePractice} className="w-full md:w-auto justify-center bg-white text-stone-600 px-8 py-3 rounded-2xl font-bold text-lg border border-stone-200 hover:bg-stone-50 hover:border-rose-200 hover:text-rose-500 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.startContext} <GraduationCap size={20} className="opacity-60" /></button>
+              <button onClick={startSentencePractice} className="w-full md:w-auto justify-center bg-white text-charcoal px-8 py-3 rounded-2xl font-bold text-lg border border-mist-dark hover:bg-mist hover:border-rose-dust/50 hover:text-rose-dust hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.startContext} <GraduationCap size={20} className="opacity-60" /></button>
             ) : null}
           </div>
         </section>
 
         {showSentences && (
-          <section id="sentence-section" className="space-y-6 pt-8 border-t border-dashed border-rose-200 animate-in fade-in slide-in-from-bottom-8 duration-700 scroll-mt-24">
+          <section id="sentence-section" className="space-y-6 pt-8 border-t border-dashed border-mist-dark animate-in fade-in slide-in-from-bottom-8 duration-700 scroll-mt-24">
             {phase === AppPhase.LOADING_SENTENCES ? <div className="py-12"><LoadingSpinner message={ui.loadingSentences} /></div> : (
               <>
                 <div className="flex items-center justify-between px-2">
-                  <h3 className="text-lg font-bold text-stone-600 flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-500 text-xs font-bold">2</span>{ui.section2Header}</h3>
-                  {phase === AppPhase.SENTENCE_REVIEW && (sentenceErrors === 0 ? <span className="text-emerald-600 flex items-center gap-1 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100"><CheckCircle size={14} /> {ui.complete}</span> : <span className="text-rose-500 flex items-center gap-1 text-xs font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100"><XCircle size={14} /> {sentenceErrors} {ui.mistakes}</span>)}
+                  <h3 className="text-lg font-bold text-stone-grey flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full bg-lake/10 text-lake text-xs font-bold">2</span>{ui.section2Header}</h3>
+                  {phase === AppPhase.SENTENCE_REVIEW && (sentenceErrors === 0 ? <span className="text-lake flex items-center gap-1 text-xs font-bold bg-lake/10 px-3 py-1 rounded-full border border-lake/20"><CheckCircle size={14} /> {ui.complete}</span> : <span className="text-rose-dust flex items-center gap-1 text-xs font-bold bg-rose-dust/10 px-3 py-1 rounded-full border border-rose-dust/20"><XCircle size={14} /> {sentenceErrors} {ui.mistakes}</span>)}
                 </div>
-                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-stone-600 text-sm flex gap-3 items-start">
-                  <div className="shrink-0 mt-0.5 text-rose-400"><BookOpen size={18} /></div>
+                <div className="bg-mist border border-mist-dark rounded-2xl p-4 text-stone-grey text-sm flex gap-3 items-start">
+                  <div className="shrink-0 mt-0.5 text-lake"><BookOpen size={18} /></div>
                   <div className="space-y-1">
-                    <p className="font-medium leading-relaxed">{ui.contextInstructions} <strong className="text-rose-500 bg-rose-50 px-1 rounded">{verbData.verb}</strong></p>
-                    <p className="text-stone-400 text-xs">{ui.tapWord}</p>
+                    <p className="font-medium leading-relaxed">{ui.contextInstructions} <strong className="text-lake bg-white px-1 rounded border border-mist-dark">{verbData.verb}</strong></p>
+                    <p className="text-stone-grey text-xs">{ui.tapWord}</p>
                   </div>
                 </div>
                 <SentenceQuiz sentences={sentences} userInput={sentenceInput} onInputChange={handleSentenceChange} isReviewMode={phase === AppPhase.SENTENCE_REVIEW} uiLabels={ui} />
                 <div className="flex justify-end pt-4 pb-8">
                   {phase === AppPhase.SENTENCE_INPUT ? (
-                    <button onClick={checkSentences} className="w-full md:w-auto justify-center bg-rose-200 text-rose-900 px-8 py-3 rounded-2xl font-bold text-lg border border-rose-300 hover:bg-rose-300 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.checkAnswers} <ArrowRight size={20} className="opacity-60" /></button>
+                    <button onClick={checkSentences} className="w-full md:w-auto justify-center bg-rose-dust text-white px-8 py-3 rounded-2xl font-bold text-lg shadow-lg shadow-rose-dust/20 hover:bg-rose-dust/90 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2">{ui.checkAnswers} <ArrowRight size={20} className="opacity-60" /></button>
                   ) : (
-                    <button onClick={() => setShowSummaryModal(true)} className="w-full md:w-auto justify-center bg-white text-stone-600 px-8 py-3 rounded-2xl font-bold text-lg border border-stone-200 hover:bg-stone-50 hover:border-rose-200 hover:text-rose-500 hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.nextVerb} <RefreshCw size={20} className="opacity-60" /></button>
+                    <button onClick={() => setShowSummaryModal(true)} className="w-full md:w-auto justify-center bg-white text-charcoal px-8 py-3 rounded-2xl font-bold text-lg border border-mist-dark hover:bg-mist hover:border-rose-dust/50 hover:text-rose-dust hover:scale-[1.02] transition-all active:scale-95 flex items-center gap-2 shadow-sm">{ui.nextVerb} <RefreshCw size={20} className="opacity-60" /></button>
                   )}
                 </div>
               </>
@@ -1155,7 +1224,7 @@ function AppContent() {
       case 'quiz':
         return renderPracticePage();
       case 'tutorial':
-        return renderTutorialPlaceholder();
+        return <ConjugationGuide language={language} explanationLanguage={instructionLang} />;
       case 'settings':
         return (
           <Settings
@@ -1175,8 +1244,47 @@ function AppContent() {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-stone-50"><LoadingSpinner message="Starting up..." /></div>;
 
+  // If user is logged in but we are still in LOGIN phase, it means we are syncing profile.
+  // Show loading to prevent "flash of login screen" on redirect.
+  if (user && phase === AppPhase.LOGIN) {
+    if (syncTimeout) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50 p-4 text-center space-y-6 animate-in fade-in duration-500">
+          <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-400 animate-pulse">
+            <AlertCircle size={32} />
+          </div>
+          <div className="space-y-2 max-w-xs">
+            <h3 className="text-xl font-bold text-stone-700">Taking too long?</h3>
+            <p className="text-stone-500 text-sm">We're having trouble loading your profile. It might be a connection issue.</p>
+          </div>
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <button onClick={() => window.location.reload()} className="bg-rose-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-rose-200 hover:bg-rose-600 transition-colors flex items-center justify-center gap-2">
+              <RefreshCw size={18} /> Retry Connection
+            </button>
+            <button onClick={handleGuestEntry} className="bg-white text-stone-600 border border-stone-200 py-3 rounded-xl font-bold hover:bg-stone-50 transition-colors">
+              Continue as Guest
+            </button>
+            <button onClick={() => logout()} className="text-rose-400 font-bold text-sm hover:text-rose-600 py-2 flex items-center justify-center gap-2">
+              <LogOut size={16} /> Sign Out
+            </button>
+          </div>
+
+          {/* Debug Info */}
+          <div className="pt-4 border-t border-stone-100 w-full max-w-xs">
+            <p className="text-[10px] text-stone-300 font-mono text-center">
+              UID: {user.uid.slice(0, 8)}...<br />
+              Phase: {phase}<br />
+              PWA: {String(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true)}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><LoadingSpinner message="Signing in..." /></div>;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 font-sans selection:bg-rose-100 selection:text-rose-900">
+    <div className="min-h-screen flex flex-col bg-mist text-charcoal font-sans selection:bg-rose-dust/20 selection:text-rose-dust">
       {renderCountdown()}
       {renderSummaryModal()}
 

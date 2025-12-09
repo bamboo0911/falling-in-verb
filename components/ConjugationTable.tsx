@@ -64,7 +64,7 @@ export const ConjugationTable: React.FC<Props> = ({
     if (userVal === correctVal) {
       return <CheckCircleIcon className="w-5 h-5 text-emerald-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-80" />;
     }
-    return <XCircleIcon className="w-5 h-5 text-rose-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-80" />;
+    return <XCircleIcon className="w-5 h-5 text-rose-dust absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-80" />;
   };
 
   const getCorrectAnswerDisplay = (tense: string, person: string) => {
@@ -74,7 +74,7 @@ export const ConjugationTable: React.FC<Props> = ({
 
     if (userVal !== correctVal.toLowerCase()) {
       return (
-        <div className="text-xs text-rose-500 font-bold mt-1.5 px-2 py-1 bg-rose-50 rounded-lg w-fit shadow-sm animate-in fade-in slide-in-from-top-1 border border-rose-100">
+        <div className="text-xs text-rose-dust font-bold mt-1.5 px-2 py-1 bg-mist rounded-lg w-fit shadow-sm animate-in fade-in slide-in-from-top-1 border border-mist-dark">
           Ans: {correctVal}
         </div>
       );
@@ -86,8 +86,8 @@ export const ConjugationTable: React.FC<Props> = ({
     w-full p-2 pr-8 rounded-xl border transition-all outline-none font-medium
     ${isJP ? 'text-xl font-japanese' : 'text-base'} 
     ${isReviewMode && isCorrect ? "border-emerald-200 bg-emerald-50/50 text-emerald-700" : ""}
-    ${isReviewMode && isWrong ? "border-rose-200 bg-rose-50/50 text-rose-700" : ""}
-    ${!isReviewMode ? "border-stone-200 bg-stone-50/50 focus:bg-white focus:border-rose-300 focus:ring-4 focus:ring-rose-50 text-stone-600 placeholder-stone-300" : ""}
+    ${isReviewMode && isWrong ? "border-rose-dust/30 bg-mist text-rose-700" : ""}
+    ${!isReviewMode ? "border-mist-dark bg-mist/30 focus:bg-white focus:border-lake focus:ring-4 focus:ring-lake/20 text-charcoal placeholder-stone-grey" : ""}
   `;
 
   // Mobile Navigation Logic
@@ -108,7 +108,7 @@ export const ConjugationTable: React.FC<Props> = ({
     const isJPLastTab = jpTab === 'Polite';
 
     return (
-      <div className="w-full bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+      <div className="w-full bg-white rounded-3xl shadow-sm border border-mist-dark overflow-hidden">
         {/* JP Toggle Tabs */}
         <div className="flex border-b border-stone-100 bg-stone-50/50 sticky top-0 z-20">
           {pronouns.map(p => (
@@ -120,8 +120,8 @@ export const ConjugationTable: React.FC<Props> = ({
               }}
               className={`flex-1 py-4 text-center font-bold text-lg transition-all relative
                   ${jpTab === p
-                  ? 'bg-white text-rose-400 shadow-[0_-2px_0_0_inset] shadow-rose-300'
-                  : 'text-stone-400 hover:text-stone-500 hover:bg-stone-50'}
+                  ? 'bg-white text-lake shadow-[0_-2px_0_0_inset] shadow-lake'
+                  : 'text-stone-grey hover:text-charcoal hover:bg-mist'}
                `}
             >
               {p === 'Plain' ? 'Plain (普通形)' : 'Polite (丁寧形)'}
@@ -156,8 +156,8 @@ export const ConjugationTable: React.FC<Props> = ({
                     className={`w-full p-3 pr-10 rounded-xl border transition-all outline-none font-medium
                           text-lg font-japanese
                           ${isReviewMode && isCorrect ? "border-emerald-200 bg-emerald-50/50 text-emerald-700" : ""}
-                          ${isReviewMode && isWrong ? "border-rose-200 bg-rose-50/50 text-rose-700" : ""}
-                          ${!isReviewMode ? "border-stone-200 bg-stone-50/50 focus:bg-white focus:border-rose-300 focus:ring-4 focus:ring-rose-50 text-stone-600" : ""}
+                          ${isReviewMode && isWrong ? "border-rose-dust/30 bg-mist text-rose-700" : ""}
+                          ${!isReviewMode ? "border-mist-dark bg-mist/30 focus:bg-white focus:border-lake focus:ring-4 focus:ring-lake/20 text-charcoal" : ""}
                         `}
                   />
                   {getFeedbackIcon(tense, jpTab)}
@@ -182,7 +182,7 @@ export const ConjugationTable: React.FC<Props> = ({
                 }}
                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95
                    ${isJPLastTab
-                    ? 'bg-rose-200 text-rose-900 border border-rose-300 hover:bg-rose-300'
+                    ? 'bg-rose-dust/10 text-rose-dust border border-rose-dust/30 hover:bg-rose-dust/20'
                     : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'}
                  `}
               >
@@ -204,16 +204,16 @@ export const ConjugationTable: React.FC<Props> = ({
   return (
     <div className="w-full">
       {/* ================= DESKTOP VIEW (Table) ================= */}
-      <div className="hidden md:block w-full rounded-3xl shadow-sm border border-stone-100 bg-white overflow-hidden">
+      <div className="hidden md:block w-full rounded-3xl shadow-sm border border-mist-dark bg-white overflow-hidden">
         <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
           <table className="w-full min-w-[700px] border-collapse">
             <thead>
               <tr>
-                <th className="p-4 text-left text-sm font-semibold text-stone-400 bg-stone-50/50 border-b border-stone-100 sticky left-0 z-10 w-32">
+                <th className="p-4 text-left text-sm font-semibold text-stone-grey bg-mist/50 border-b border-mist-dark sticky left-0 z-10 w-32">
                   {rowHeaderLabel}
                 </th>
                 {tenses.map((tense) => (
-                  <th key={tense} className="p-4 text-left text-sm font-bold text-stone-500 bg-stone-50/50 border-b border-stone-100 whitespace-nowrap min-w-[150px]">
+                  <th key={tense} className="p-4 text-left text-sm font-bold text-stone-grey bg-mist/50 border-b border-mist-dark whitespace-nowrap min-w-[150px]">
                     {tenseLabels[tense] || tense}
                   </th>
                 ))}
@@ -221,8 +221,8 @@ export const ConjugationTable: React.FC<Props> = ({
             </thead>
             <tbody>
               {pronouns.map((person) => (
-                <tr key={person} className="hover:bg-stone-50/30 transition-colors group">
-                  <td className="p-3 border-b border-stone-50 font-medium text-rose-400 text-sm sticky left-0 bg-white z-10 group-hover:bg-stone-50/30 transition-colors">
+                <tr key={person} className="hover:bg-mist/30 transition-colors group">
+                  <td className="p-3 border-b border-mist-dark font-medium text-rose-dust text-sm sticky left-0 bg-white z-10 group-hover:bg-mist/30 transition-colors">
                     {person}
                   </td>
                   {tenses.map((tense) => {
@@ -260,7 +260,7 @@ export const ConjugationTable: React.FC<Props> = ({
       </div>
 
       {/* ================= MOBILE VIEW (Tabs + Cards) ================= */}
-      <div className="md:hidden bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+      <div className="md:hidden bg-white rounded-3xl shadow-sm border border-mist-dark overflow-hidden">
         {/* Mobile Tabs */}
         <div className="flex border-b border-stone-100 bg-stone-50/50 overflow-x-auto scrollbar-hide sticky top-0 z-20">
           {tenses.map((tense, idx) => (
@@ -271,7 +271,7 @@ export const ConjugationTable: React.FC<Props> = ({
                 setActiveTab(idx);
               }}
               className={`flex-1 py-4 px-4 text-sm font-bold transition-all relative outline-none touch-manipulation whitespace-nowrap
-                ${idx === activeTab ? 'text-rose-500 bg-white shadow-[0_-2px_0_0_inset] shadow-rose-300' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'}
+                ${idx === activeTab ? 'text-lake bg-white shadow-[0_-2px_0_0_inset] shadow-lake' : 'text-stone-grey hover:text-charcoal hover:bg-mist'}
               `}
             >
               {tenseLabels[tense] || tense}
@@ -285,7 +285,7 @@ export const ConjugationTable: React.FC<Props> = ({
             <h4 className="text-lg font-bold text-stone-600">{tenseLabels[tenses[activeTab]] || tenses[activeTab]}</h4>
             <div className="flex gap-1.5">
               {tenses.map((_, i) => (
-                <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === activeTab ? 'w-6 bg-rose-300' : 'w-1.5 bg-stone-200'}`} />
+                <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === activeTab ? 'w-6 bg-lake' : 'w-1.5 bg-mist-dark'}`} />
               ))}
             </div>
           </div>
@@ -300,7 +300,7 @@ export const ConjugationTable: React.FC<Props> = ({
 
               return (
                 <div key={`${tense}-${person}`} className="space-y-1.5">
-                  <label className="block text-xs font-bold text-rose-300 uppercase tracking-wider ml-1">
+                  <label className="block text-xs font-bold text-rose-dust uppercase tracking-wider ml-1">
                     {person}
                   </label>
                   <div className="relative">
@@ -315,8 +315,8 @@ export const ConjugationTable: React.FC<Props> = ({
                       spellCheck="false"
                       className={`w-full p-3 pr-10 rounded-xl border transition-all outline-none font-medium text-base
                         ${isReviewMode && isCorrect ? "border-emerald-200 bg-emerald-50/50 text-emerald-700" : ""}
-                        ${isReviewMode && isWrong ? "border-rose-200 bg-rose-50/50 text-rose-700" : ""}
-                        ${!isReviewMode ? "border-stone-200 bg-stone-50/50 focus:bg-white focus:border-rose-300 focus:ring-4 focus:ring-rose-50 text-stone-600" : ""}
+                        ${isReviewMode && isWrong ? "border-rose-dust/30 bg-mist text-rose-700" : ""}
+                        ${!isReviewMode ? "border-mist-dark bg-mist/30 focus:bg-white focus:border-lake focus:ring-4 focus:ring-lake/20 text-charcoal" : ""}
                       `}
                     />
                     {getFeedbackIcon(tense, person)}
@@ -334,7 +334,7 @@ export const ConjugationTable: React.FC<Props> = ({
                 onClick={handleMobileNext}
                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95
                    ${isLastTab
-                    ? 'bg-rose-200 text-rose-900 border border-rose-300 hover:bg-rose-300'
+                    ? 'bg-rose-dust/10 text-rose-dust border border-rose-dust/30 hover:bg-rose-dust/20'
                     : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'}
                  `}
               >
